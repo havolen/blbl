@@ -95,7 +95,12 @@ class SettingsActivity : BaseActivity() {
         interactionHandler.renderer = renderer
 
         renderer.installFocusListener()
-        renderer.showSection(0)
+        renderer.showSection(savedInstanceState?.getInt(EXTRA_SECTION) ?: intent.getIntExtra(EXTRA_SECTION, 0).coerceIn(sections.indices))
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(EXTRA_SECTION, state.currentSectionIndex.coerceAtLeast(0))
     }
 
     override fun onResume() {
@@ -229,4 +234,9 @@ class SettingsActivity : BaseActivity() {
             keyCode == KeyEvent.KEYCODE_ESCAPE ||
             keyCode == KeyEvent.KEYCODE_BUTTON_B
     }
+    companion object {
+        const val EXTRA_SECTION = "settings_section"
+        const val SECTION_ABOUT = 4
+    }
+
 }

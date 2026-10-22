@@ -3,6 +3,7 @@ package blbl.cat3399.core.prefs
 import android.content.Context
 import android.provider.Settings
 import blbl.cat3399.core.api.SponsorBlockCategories
+import blbl.cat3399.core.navigation.MainNavigationKeys
 import blbl.cat3399.core.tv.isTvDevice
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
@@ -74,10 +75,20 @@ class AppPrefs(context: Context) {
         }
 
     var startupPage: String
-        get() = prefs.getString(KEY_STARTUP_PAGE, STARTUP_PAGE_HOME)?.trim()?.takeIf { it.isNotBlank() } ?: STARTUP_PAGE_HOME
+        get() {
+            val old = prefs.getString(KEY_STARTUP_PAGE, MainNavigationKeys.RECOMMEND).orEmpty().trim()
+            val key = MainNavigationKeys.migrateStartupKey(old)
+            if (key != old) prefs.edit().putString(KEY_STARTUP_PAGE, key).apply()
+            return key
+        }
         set(value) {
-            val v = value.trim().takeIf { it.isNotBlank() } ?: STARTUP_PAGE_HOME
-            prefs.edit().putString(KEY_STARTUP_PAGE, v).apply()
+            prefs.edit().putString(KEY_STARTUP_PAGE, MainNavigationKeys.migrateStartupKey(value.trim())).apply()
+        }
+
+    var lastVisitedTopNavigationKey: String?
+        get() = prefs.getString(KEY_LAST_VISITED_TOP_NAVIGATION, null)?.takeIf { it in MainNavigationKeys.destinations }
+        set(value) {
+            if (value in MainNavigationKeys.destinations) prefs.edit().putString(KEY_LAST_VISITED_TOP_NAVIGATION, value).apply()
         }
 
     var customPageConfig: CustomPageConfig
@@ -106,6 +117,38 @@ class AppPrefs(context: Context) {
     var mainMyVisibleTabs: List<String>
         get() = loadStringList(KEY_MAIN_MY_VISIBLE_TABS)
         set(value) = saveStringList(KEY_MAIN_MY_VISIBLE_TABS, normalizeStringList(value))
+
+    /** Visible top-level entries in canonical order. Older page-local filters do not affect this list. */
+    var topNavigationVisibleKeys: List<String>
+        get() {
+            val saved = prefs.getStringSet(KEY_TOP_NAVIGATION_VISIBLE_KEYS, null)
+            // Migrate only the exact previous default; preserve other user selections.
+            val previousDefault = MainNavigationKeys.defaultVisible + setOf(MainNavigationKeys.MY_HISTORY, MainNavigationKeys.MY_FAVORITES)
+            val migrate = !prefs.getBoolean("top_nav_defaults_v4", false)
+            val selected = if (migrate && saved == previousDefault) MainNavigationKeys.defaultVisible
+                else saved?.toSet() ?: MainNavigationKeys.defaultVisible
+            if (migrate) {
+                val editor = prefs.edit().putBoolean("top_nav_defaults_v4", true)
+                if (saved != null && saved != selected) editor.putStringSet(KEY_TOP_NAVIGATION_VISIBLE_KEYS, selected)
+                editor.apply()
+            }
+            return MainNavigationKeys.all.filter { it in selected }
+                .ifEmpty { MainNavigationKeys.all.filter { it in MainNavigationKeys.defaultVisible } }
+        }
+        set(value) {
+            val selected = value.toSet().intersect(MainNavigationKeys.all.toSet())
+            if (selected.isEmpty()) return
+            prefs.edit().putStringSet(KEY_TOP_NAVIGATION_VISIBLE_KEYS, MainNavigationKeys.all.filter { it in selected }.toSet()).apply()
+        }
+
+    fun setTopNavigationItemVisible(key: String, visible: Boolean): Boolean {
+        if (key !in MainNavigationKeys.all) return false
+        val selected = topNavigationVisibleKeys.toMutableSet()
+        if (visible) selected.add(key) else selected.remove(key)
+        if (selected.isEmpty()) return false
+        topNavigationVisibleKeys = selected.toList()
+        return true
+    }
 
     var followingListOrder: String
         get() {
@@ -610,10 +653,6 @@ class AppPrefs(context: Context) {
         get() = prefs.getBoolean(KEY_TAB_SWITCH_FOLLOWS_FOCUS, true)
         set(value) = prefs.edit().putBoolean(KEY_TAB_SWITCH_FOLLOWS_FOCUS, value).apply()
 
-    var mainAutoHideSidebarOnEnterContent: Boolean
-        get() = prefs.getBoolean(KEY_MAIN_AUTO_HIDE_SIDEBAR_ON_ENTER_CONTENT, false)
-        set(value) = prefs.edit().putBoolean(KEY_MAIN_AUTO_HIDE_SIDEBAR_ON_ENTER_CONTENT, value).apply()
-
     /**
      * Main page (Home/Category/Live/My) "Back" key focus-return scheme.
      *
@@ -1064,11 +1103,13 @@ class AppPrefs(context: Context) {
         private const val KEY_UI_SCALE_FACTOR = "ui_scale_factor"
         private const val KEY_THEME_PRESET = "theme_preset"
         private const val KEY_STARTUP_PAGE = "startup_page"
+        private const val KEY_LAST_VISITED_TOP_NAVIGATION = "last_visited_top_navigation_key"
         private const val KEY_CUSTOM_PAGE_CONFIG = "custom_page_config"
         private const val KEY_MAIN_HOME_VISIBLE_TABS = "main_home_visible_tabs"
         private const val KEY_MAIN_CATEGORY_VISIBLE_TABS = "main_category_visible_tabs"
         private const val KEY_MAIN_LIVE_VISIBLE_TABS = "main_live_visible_tabs"
         private const val KEY_MAIN_MY_VISIBLE_TABS = "main_my_visible_tabs"
+        private const val KEY_TOP_NAVIGATION_VISIBLE_KEYS = "top_navigation_visible_keys"
         private const val KEY_FOLLOWING_LIST_ORDER = "following_list_order"
         private const val KEY_DYNAMIC_FOLLOWING_RECENT_UPDATE_DOT_ENABLED = "dynamic_following_recent_update_dot_enabled"
         private const val KEY_AUTO_UPDATE_CHECK_ENABLED = "auto_update_check_enabled"
@@ -1122,7 +1163,6 @@ class AppPrefs(context: Context) {
         private const val KEY_FULLSCREEN = "fullscreen_enabled"
         private const val KEY_AVOID_DISPLAY_CUTOUT = "avoid_display_cutout"
         private const val KEY_TAB_SWITCH_FOLLOWS_FOCUS = "tab_switch_follows_focus"
-        private const val KEY_MAIN_AUTO_HIDE_SIDEBAR_ON_ENTER_CONTENT = "main_auto_hide_sidebar_on_enter_content"
         private const val KEY_MAIN_BACK_FOCUS_SCHEME = "main_back_focus_scheme"
         private const val KEY_VIDEO_CARD_LONG_PRESS_ACTION = "video_card_long_press_action"
         private const val KEY_PLAYER_DEBUG = "player_debug_enabled"

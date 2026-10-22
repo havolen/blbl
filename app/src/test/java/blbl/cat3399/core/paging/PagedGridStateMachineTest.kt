@@ -10,6 +10,53 @@ import org.junit.Test
 
 class PagedGridStateMachineTest {
     @Test
+    fun failedRefreshRestoresThePreviousCursorWithoutUnlockingANewerGeneration() = runTest {
+        val machine = PagedGridStateMachine(initialKey = 1)
+        machine.loadNextPage(
+            isRefresh = false,
+            fetch = { it },
+            reduce = { key, _ -> PagedGridStateMachine.Update(listOf("old"), key + 1, false) },
+        )
+        val old = machine.snapshot()
+        machine.reset()
+        val generation = machine.snapshot().generation
+        runCatching {
+            machine.loadNextPage<Int, String>(
+                isRefresh = true,
+                fetch = { throw java.io.IOException("offline") },
+                reduce = { key, _ -> PagedGridStateMachine.Update(emptyList(), key, false) },
+            )
+        }
+        machine.restoreCursorAfterFailedRefresh(old, generation)
+        assertEquals(2, machine.snapshot().nextKey)
+        machine.reset()
+        machine.restoreCursorAfterFailedRefresh(old, generation)
+        assertEquals(1, machine.snapshot().nextKey)
+    }
+
+    @Test
+    fun destroyingAViewInvalidatesInFlightResultsAndKeepsTheCursor() = runTest {
+        val machine = PagedGridStateMachine(initialKey = 1)
+        val gate = CompletableDeferred<Unit>()
+        val started = CompletableDeferred<Unit>()
+        val job = launch {
+            val result = machine.loadNextPage(
+                isRefresh = false,
+                fetch = { started.complete(Unit); gate.await(); it },
+                reduce = { key, _ -> PagedGridStateMachine.Update(listOf("stale"), key + 1, true) },
+            )
+            assertTrue(result is PagedGridStateMachine.LoadResult.IgnoredStale)
+        }
+        started.await()
+        machine.invalidatePendingLoads()
+        gate.complete(Unit)
+        job.join()
+        assertEquals(1, machine.snapshot().nextKey)
+        assertFalse(machine.snapshot().isLoading)
+        assertFalse(machine.snapshot().endReached)
+    }
+
+    @Test
     fun reset_should_ignore_in_flight_request() =
         runTest {
             val machine = PagedGridStateMachine(initialKey = 1)

@@ -237,6 +237,7 @@ class SettingsRenderer(
             "页面设置" ->
                 listOf(
                     SettingEntry(SettingId.StartupPage, "启动默认页", SettingsText.startupPageText(activity, prefs.startupPage), null),
+                    SettingEntry(SettingId.TopNavigationItems, "侧边导航显示项", "${prefs.topNavigationVisibleKeys.size}/13 项显示", null),
                     SettingEntry(SettingId.GridSpanCount, "每行卡片数量", SettingsText.gridSpanText(prefs.gridSpanCount), null),
                     SettingEntry(
                         SettingId.DynamicGridSpanCount,
@@ -248,12 +249,11 @@ class SettingsRenderer(
                     SettingEntry(SettingId.UiScaleFactor, "界面大小", SettingsText.uiScaleFactorText(prefs.uiScaleFactor), null),
                     SettingEntry(SettingId.FullscreenEnabled, "以全屏模式运行", if (prefs.fullscreenEnabled) "开" else "关", null),
                     SettingEntry(SettingId.AvoidDisplayCutout, "避开挖孔/圆角区域", if (prefs.avoidDisplayCutout) "开" else "关", null),
-                    SettingEntry(SettingId.TabSwitchFollowsFocus, "tab跟随焦点切换", if (prefs.tabSwitchFollowsFocus) "开" else "关", null),
                     SettingEntry(
-                        SettingId.MainAutoHideSidebarOnEnterContent,
-                        "进入内容区后关闭侧边栏",
-                        if (prefs.mainAutoHideSidebarOnEnterContent) "开" else "关",
-                        null,
+                        SettingId.TabSwitchFollowsFocus,
+                        "导航跟随焦点切换",
+                        if (prefs.tabSwitchFollowsFocus) "开" else "关",
+                        "侧栏及分类、直播页内导航均适用；开启后移动焦点即切换，关闭后按确认键切换。",
                     ),
                     SettingEntry(
                         SettingId.MainBackFocusScheme,
@@ -287,12 +287,6 @@ class SettingsRenderer(
                         null,
                     ),
                     SettingEntry(
-                        SettingId.MainHomeVisibleTabs,
-                        "主页显示页面",
-                        SettingsText.mainHomeVisibleTabsText(activity, prefs.mainHomeVisibleTabs),
-                        null,
-                    ),
-                    SettingEntry(
                         SettingId.MainCategoryVisibleTabs,
                         "分类页显示页面",
                         SettingsText.mainCategoryVisibleTabsText(prefs.mainCategoryVisibleTabs),
@@ -302,12 +296,6 @@ class SettingsRenderer(
                         SettingId.MainLiveVisibleTabs,
                         "直播页显示页面",
                         SettingsText.mainLiveVisibleTabsText(prefs.mainLiveVisibleTabs),
-                        null,
-                    ),
-                    SettingEntry(
-                        SettingId.MainMyVisibleTabs,
-                        "我的页显示页面",
-                        SettingsText.mainMyVisibleTabsText(activity, prefs.mainMyVisibleTabs),
                         null,
                     ),
                 )

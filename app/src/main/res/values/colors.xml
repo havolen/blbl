@@ -3,7 +3,25 @@
     <color name="blbl_bg">#121212</color>
     <color name="blbl_surface">#1E1E1E</color>
     <color name="blbl_text">#EDEDED</color>
+    <color name="blbl_text_dark_soft_pink">#F2F2F2</color>
     <color name="blbl_text_secondary">#B3B3B3</color>
+
+    <!-- Default dark glass preset; branding pink remains separate. -->
+    <color name="blbl_bg_dark_glass">#0C0D0F</color>
+    <color name="blbl_surface_dark_glass">#1B1D20</color>
+    <color name="blbl_text_dark_glass">#F5F5F7</color>
+    <color name="blbl_text_secondary_dark_glass">#B8BBC1</color>
+    <color name="blbl_glass_sidebar_fill">#E0202124</color>
+    <color name="blbl_glass_edge_highlight">#24FFFFFF</color>
+    <color name="blbl_glass_selected">#D9F5F5F7</color>
+    <color name="blbl_glass_focus">#F5F5F7</color>
+    <color name="blbl_glass_focus_text">#17181B</color>
+    <color name="blbl_glass_accent">#DADCE0</color>
+    <color name="blbl_glass_accent_container">#263A3D42</color>
+    <color name="blbl_glass_accent_weak">#33F5F5F7</color>
+    <color name="blbl_glass_accent_pressed">#44F5F5F7</color>
+    <color name="blbl_glass_focus_stroke">#D9F5F5F7</color>
+    <color name="blbl_glass_focus_fill">#1AF5F5F7</color>
 
     <!-- Text/icon tint used on top of media covers with scrims/shadows (theme-independent). -->
     <color name="blbl_text_on_media">#EDEDED</color>
@@ -34,6 +52,13 @@
     <color name="blbl_accent_violet_container">#338A2BE2</color>
     <color name="blbl_accent_violet_weak">#668A2BE2</color>
     <color name="blbl_accent_violet_pressed">#808A2BE2</color>
+
+    <color name="blbl_accent_dark_soft_pink">#F58AAF</color>
+    <color name="blbl_accent_dark_soft_pink_container">#35242A</color>
+    <color name="blbl_accent_dark_soft_pink_weak">#33F58AAF</color>
+    <color name="blbl_accent_dark_soft_pink_pressed">#80F58AAF</color>
+    <color name="blbl_focus_dark_soft_pink">#F7B2CB</color>
+    <color name="blbl_on_dark_soft_pink">#21161A</color>
 
     <color name="blbl_accent_tv_pink_container">#33FB7299</color>
     <color name="blbl_accent_tv_pink_weak">#66FB7299</color>

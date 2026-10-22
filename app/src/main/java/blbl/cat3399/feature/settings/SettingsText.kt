@@ -12,9 +12,7 @@ import blbl.cat3399.core.prefs.CustomPageConfig
 import blbl.cat3399.core.prefs.PlayerPlaybackModes
 import blbl.cat3399.feature.category.CategoryZones
 import blbl.cat3399.feature.custom.CustomPageTabRegistry
-import blbl.cat3399.feature.home.HomeTabs
 import blbl.cat3399.feature.live.LiveFragment
-import blbl.cat3399.feature.my.MyTabs
 import blbl.cat3399.ui.MainRootNavRegistry
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -117,13 +115,6 @@ object SettingsText {
         return labels.take(2).joinToString(separator = " / ") + " 等${labels.size}项"
     }
 
-    fun mainHomeVisibleTabsText(context: Context, selectedKeys: List<String>): String {
-        return visibleTabsText(
-            options = HomeTabs.all.map { it.key to context.getString(it.titleRes) },
-            selectedKeys = selectedKeys,
-        )
-    }
-
     fun mainCategoryVisibleTabsText(selectedKeys: List<String>): String {
         return visibleTabsText(
             options = CategoryZones.defaultZones.map { CategoryZones.stableKeyFor(it) to it.title },
@@ -134,13 +125,6 @@ object SettingsText {
     fun mainLiveVisibleTabsText(selectedKeys: List<String>): String {
         return visibleTabsText(
             options = LiveFragment.LiveTabs.all.map { it.key to it.title },
-            selectedKeys = selectedKeys,
-        )
-    }
-
-    fun mainMyVisibleTabsText(context: Context, selectedKeys: List<String>): String {
-        return visibleTabsText(
-            options = MyTabs.all.map { it.key to context.getString(it.titleRes) },
             selectedKeys = selectedKeys,
         )
     }
@@ -160,9 +144,9 @@ object SettingsText {
 
     fun mainBackFocusSchemeText(prefValue: String): String =
         when (prefValue) {
-            blbl.cat3399.core.prefs.AppPrefs.MAIN_BACK_FOCUS_SCHEME_B -> "回到Tab0内容区"
-            blbl.cat3399.core.prefs.AppPrefs.MAIN_BACK_FOCUS_SCHEME_C -> "回到侧边栏"
-            else -> "回到当前所属Tab"
+            blbl.cat3399.core.prefs.AppPrefs.MAIN_BACK_FOCUS_SCHEME_B -> "回到推荐内容区"
+            blbl.cat3399.core.prefs.AppPrefs.MAIN_BACK_FOCUS_SCHEME_C -> "回到顶部导航"
+            else -> "回到当前页面分区"
         }
 
     fun videoCardLongPressActionText(prefValue: String): String =

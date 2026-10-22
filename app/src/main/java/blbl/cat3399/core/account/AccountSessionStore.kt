@@ -149,6 +149,8 @@ class AccountSessionStore(
         mid: Long? = null,
     ): AccountRecord? {
         if (!cookies.hasSessData() && appPrefs.appAuthSession == null) return null
+        val cookieMid = cookies.getCookieValue("DedeUserID")?.toLongOrNull()?.takeIf { it > 0 }
+        if (mid != null && cookieMid != null && mid != cookieMid) return null
         val resolvedMid = mid?.takeIf { it > 0L } ?: currentMid(appPrefs, cookies) ?: return null
         val id = accountId ?: accountIdForMid(resolvedMid)
         val old = readRecords().firstOrNull { it.id == id }
@@ -189,8 +191,8 @@ class AccountSessionStore(
         appPrefs: AppPrefs,
         cookies: CookieStore,
     ): Long? =
-        appPrefs.appAuthSession?.mid?.takeIf { it > 0L }
-            ?: cookies.getCookieValue("DedeUserID")?.trim()?.toLongOrNull()?.takeIf { it > 0L }
+        cookies.getCookieValue("DedeUserID")?.trim()?.toLongOrNull()?.takeIf { it > 0L }
+            ?: appPrefs.appAuthSession?.mid?.takeIf { it > 0L }
 
     private fun activeAccountId(): String? = prefs.getString(KEY_ACTIVE_ACCOUNT_ID, null)?.trim()?.takeIf { it.isNotBlank() }
 

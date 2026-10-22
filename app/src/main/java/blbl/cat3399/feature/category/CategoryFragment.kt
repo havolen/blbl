@@ -1,5 +1,7 @@
 package blbl.cat3399.feature.category
 
+import blbl.cat3399.core.ui.PageSectionFocusHost
+import blbl.cat3399.core.ui.bindDpadSectionNavigation
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.LayoutInflater
@@ -23,9 +25,9 @@ import blbl.cat3399.core.ui.TabContentFocusTarget
 import blbl.cat3399.databinding.FragmentCategoryBinding
 import blbl.cat3399.feature.video.VideoGridTabSwitchFocusHost
 import blbl.cat3399.ui.BackPressHandler
-import blbl.cat3399.ui.SidebarFocusHost
+import blbl.cat3399.ui.MainNavigationHost
 
-class CategoryFragment : Fragment(), VideoGridTabSwitchFocusHost, BackPressHandler {
+class CategoryFragment : Fragment(), PageSectionFocusHost, VideoGridTabSwitchFocusHost, BackPressHandler {
     private var _binding: FragmentCategoryBinding? = null
     private val binding get() = _binding!!
     private var mediator: TabLayoutMediator? = null
@@ -118,16 +120,10 @@ class CategoryFragment : Fragment(), VideoGridTabSwitchFocusHost, BackPressHandl
                     "tab focus pos=$position title=${zone?.title} rid=${zone?.rid} t=${SystemClock.uptimeMillis()}",
                 )
             }
-            val tabStrip = tabLayout.getChildAt(0) as? ViewGroup ?: return@postIfAlive
-            for (i in 0 until tabStrip.childCount) {
-                tabStrip.getChildAt(i).setOnKeyListener { _, keyCode, event ->
-                    if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                        focusCurrentPageFirstCardFromTab()
-                        return@setOnKeyListener true
-                    }
-                    false
-                }
-            }
+            tabLayout.bindDpadSectionNavigation(
+                onDown = { focusCurrentPageFirstCardFromTab() },
+                onUp = { (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true },
+            )
         }
     }
 
@@ -173,6 +169,8 @@ class CategoryFragment : Fragment(), VideoGridTabSwitchFocusHost, BackPressHandl
         return true
     }
 
+    override fun requestFocusPageSection(): Boolean = focusSelectedTab()
+
     private fun focusSelectedTab(): Boolean {
         val b = _binding ?: return false
         return b.tabLayout.requestFocusSelectedTab(fallbackPosition = b.viewPager.currentItem) { _binding != null }
@@ -190,9 +188,9 @@ class CategoryFragment : Fragment(), VideoGridTabSwitchFocusHost, BackPressHandl
         val b = _binding ?: return false
         val scheme = BiliClient.prefs.mainBackFocusScheme
 
-        // Tab strip is a navigation layer: Back should always return to the left sidebar.
+        // The page-local tab strip sits below the global top navigation.
         if (b.tabLayout.hasFocus()) {
-            return (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+            return (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
         }
 
         // Only handle the Back key when focus is inside the page content area.
@@ -212,11 +210,11 @@ class CategoryFragment : Fragment(), VideoGridTabSwitchFocusHost, BackPressHandl
                     b.viewPager.setCurrentItem(0, false)
                     true
                 } else {
-                    (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+                    (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
                 }
             }
             AppPrefs.MAIN_BACK_FOCUS_SCHEME_C -> {
-                (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+                (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
             }
             else -> focusSelectedTab()
         }

@@ -2,7 +2,6 @@ package blbl.cat3399.feature.my
 
 import android.os.Bundle
 import android.os.SystemClock
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,26 +11,33 @@ import blbl.cat3399.R
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.net.BiliClient
 import blbl.cat3399.core.prefs.AppPrefs
-import blbl.cat3399.core.ui.enableDpadTabFocus
 import blbl.cat3399.core.ui.findCurrentViewPagerChildFragment
 import blbl.cat3399.core.ui.findCurrentViewPagerChildFragmentAs
 import blbl.cat3399.core.ui.postIfAlive
-import blbl.cat3399.core.ui.requestFocusSelectedTab
 import blbl.cat3399.databinding.FragmentMyTabsBinding
 import blbl.cat3399.ui.BackPressHandler
-import com.google.android.material.tabs.TabLayoutMediator
+import blbl.cat3399.ui.MainNavigationHost
 import blbl.cat3399.ui.RefreshKeyHandler
-import blbl.cat3399.ui.SidebarFocusHost
-import com.google.android.material.tabs.TabLayout
 
 class MyTabsFragment : Fragment(), MyTabContentSwitchFocusHost, BackPressHandler {
     private var _binding: FragmentMyTabsBinding? = null
     private val binding get() = _binding!!
 
-    private var mediator: TabLayoutMediator? = null
     private var pageCallback: androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback? = null
-    private var tabs: List<MyTabSpec> = emptyList()
-    private var pendingFocusFirstItemFromContentSwitch: Boolean = false
+    private val tabs: List<MyTabSpec> = MyTabs.all
+    private var pendingFocusFirstItemFromContentSwitch = false
+
+    fun currentTopNavigationKey(): String? = MyTabs.topNavigationKeyFor(tabs.getOrNull(_binding?.viewPager?.currentItem ?: 0)?.key.orEmpty())
+
+    fun selectTopNavigationKey(key: String): Boolean {
+        val tabKey = MyTabs.tabKeyFor(key) ?: return false
+        val position = tabs.indexOfFirst { it.key == tabKey }
+        if (position < 0) return false
+        val pager = _binding?.viewPager ?: return false
+        if (position != pager.currentItem) pager.setCurrentItem(position, false)
+        else currentTopNavigationKey()?.let { (activity as? MainNavigationHost)?.onMyPageSelected(it) }
+        return true
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMyTabsBinding.inflate(inflater, container, false)
@@ -39,85 +45,26 @@ class MyTabsFragment : Fragment(), MyTabContentSwitchFocusHost, BackPressHandler
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        setTabs(MyTabs.visibleTabs(BiliClient.prefs), force = true)
-        binding.tabLayout.addOnTabSelectedListener(
-            object : TabLayout.OnTabSelectedListener {
-                override fun onTabSelected(tab: TabLayout.Tab) = Unit
-
-                override fun onTabUnselected(tab: TabLayout.Tab) = Unit
-
-                override fun onTabReselected(tab: TabLayout.Tab) {
-                    refreshCurrentPageFromTabReselect()
-                }
-            },
-        )
-
+        binding.viewPager.adapter = MyPagerAdapter(this, tabs)
+        // Category switching now belongs to the global top navigation.
+        binding.viewPager.isUserInputEnabled = false
         pageCallback =
             object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
                     val tab = tabs.getOrNull(position)
                     AppLog.d("My", "page selected pos=$position key=${tab?.key} t=${SystemClock.uptimeMillis()}")
-                    if (pendingFocusFirstItemFromContentSwitch) {
-                        if (focusCurrentPageFirstItemFromContentSwitch()) {
-                            pendingFocusFirstItemFromContentSwitch = false
-                        }
+                    MyTabs.topNavigationKeyFor(tab?.key.orEmpty())?.let {
+                        (activity as? MainNavigationHost)?.onMyPageSelected(it)
+                    }
+                    if (pendingFocusFirstItemFromContentSwitch && focusCurrentPageFirstItemFromContentSwitch()) {
+                        pendingFocusFirstItemFromContentSwitch = false
                     }
                 }
-            }
-        binding.viewPager.registerOnPageChangeCallback(pageCallback!!)
-    }
+            }.also(binding.viewPager::registerOnPageChangeCallback)
 
-    override fun onResume() {
-        super.onResume()
-        setTabs(MyTabs.visibleTabs(BiliClient.prefs))
-    }
-
-    private fun setTabs(nextTabs: List<MyTabSpec>, force: Boolean = false) {
-        val b = _binding ?: return
-        val next = nextTabs.ifEmpty { MyTabs.all }
-        if (!force && tabs.map { it.key } == next.map { it.key }) return
-
-        val currentKey = tabs.getOrNull(b.viewPager.currentItem)?.key
-        mediator?.detach()
-        mediator = null
-        tabs = next
-
-        b.viewPager.adapter = MyPagerAdapter(this, tabs)
-        mediator =
-            TabLayoutMediator(b.tabLayout, b.viewPager) { tab, position ->
-                tab.text = tabs.getOrNull(position)?.let { getString(it.titleRes) }.orEmpty()
-            }.also { it.attach() }
-
-        val targetIndex = currentKey?.let { key -> tabs.indexOfFirst { it.key == key }.takeIf { it >= 0 } } ?: 0
-        if (targetIndex != b.viewPager.currentItem && targetIndex in tabs.indices) {
-            b.viewPager.setCurrentItem(targetIndex, false)
-        }
-
-        installTabFocusHandlers(b)
-    }
-
-    private fun installTabFocusHandlers(b: FragmentMyTabsBinding) {
-        val tabLayout = b.tabLayout
-        tabLayout.postIfAlive(isAlive = { _binding === b }) {
-            tabLayout.enableDpadTabFocus(selectOnFocusProvider = { BiliClient.prefs.tabSwitchFollowsFocus }) { position ->
-                val tab = tabs.getOrNull(position)
-                AppLog.d("My", "tab focus pos=$position key=${tab?.key} t=${SystemClock.uptimeMillis()}")
-            }
-            val tabStrip = tabLayout.getChildAt(0) as? ViewGroup ?: return@postIfAlive
-            for (i in 0 until tabStrip.childCount) {
-                tabStrip.getChildAt(i).setOnKeyListener { _, keyCode, event ->
-                    if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                        return@setOnKeyListener focusCurrentPageFirstItem()
-                    }
-                    false
-                }
-            }
-        }
-    }
-
-    private fun refreshCurrentPageFromTabReselect(): Boolean {
-        val target = findCurrentViewPagerChildFragmentAs<RefreshKeyHandler>(binding.viewPager) ?: return false
-        return target.handleRefreshKey()
+        val requestedKey = (parentFragment as? MyFragment)?.requestedTopNavigationKey()
+        if (requestedKey != null) selectTopNavigationKey(requestedKey)
+        else currentTopNavigationKey()?.let { (activity as? MainNavigationHost)?.onMyPageSelected(it) }
     }
 
     private fun focusCurrentPageFirstItem(): Boolean {
@@ -129,26 +76,21 @@ class MyTabsFragment : Fragment(), MyTabContentSwitchFocusHost, BackPressHandler
             if (byTag?.view?.findViewById<RecyclerView?>(R.id.recycler) != null) {
                 byTag
             } else {
-                childFragmentManager.fragments.firstOrNull { it.isVisible && it.view?.findViewById<RecyclerView?>(R.id.recycler) != null }
+                childFragmentManager.fragments.firstOrNull {
+                    it.isVisible && it.view?.findViewById<RecyclerView?>(R.id.recycler) != null
+                }
             } ?: return false
         val recycler = pageFragment.view?.findViewById<RecyclerView?>(R.id.recycler) ?: return false
 
         recycler.postIfAlive(isAlive = { _binding != null }) {
-            val vh = recycler.findViewHolderForAdapterPosition(0)
+            val first = recycler.findViewHolderForAdapterPosition(0)?.itemView
             when {
-                vh != null -> {
-                    vh.itemView.requestFocus()
-                }
-
-                recycler.adapter?.itemCount == 0 -> {
-                    recycler.requestFocus()
-                }
-
+                first != null -> first.requestFocus()
+                recycler.adapter?.itemCount == 0 -> recycler.requestFocus()
                 else -> {
                     recycler.scrollToPosition(0)
                     recycler.postIfAlive(isAlive = { _binding != null }) {
-                        recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
-                            ?: recycler.requestFocus()
+                        recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() ?: recycler.requestFocus()
                     }
                 }
             }
@@ -157,63 +99,44 @@ class MyTabsFragment : Fragment(), MyTabContentSwitchFocusHost, BackPressHandler
     }
 
     private fun focusCurrentPageFirstItemFromContentSwitch(): Boolean {
-        val target = findCurrentViewPagerChildFragmentAs<MyTabSwitchFocusTarget>(binding.viewPager)
-            ?: return false
+        val target = findCurrentViewPagerChildFragmentAs<MyTabSwitchFocusTarget>(binding.viewPager) ?: return false
         return target.requestFocusFirstItemFromTabSwitch()
-    }
-
-    private fun focusSelectedTab(): Boolean {
-        val b = _binding ?: return false
-        return b.tabLayout.requestFocusSelectedTab(fallbackPosition = b.viewPager.currentItem) { _binding != null }
     }
 
     override fun requestFocusCurrentPageFirstItemFromContentSwitch(): Boolean {
         pendingFocusFirstItemFromContentSwitch = true
-        if (focusCurrentPageFirstItemFromContentSwitch()) {
-            pendingFocusFirstItemFromContentSwitch = false
-        }
+        if (focusCurrentPageFirstItemFromContentSwitch()) pendingFocusFirstItemFromContentSwitch = false
         return true
     }
 
     override fun handleBackPressed(): Boolean {
         val b = _binding ?: return false
-        val scheme = BiliClient.prefs.mainBackFocusScheme
+        if (!b.viewPager.hasFocus()) return false
 
-        // Tab strip is a navigation layer: Back should always return to the left sidebar.
-        if (b.tabLayout.hasFocus()) {
-            return (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
-        }
+        return when (BiliClient.prefs.mainBackFocusScheme) {
+            AppPrefs.MAIN_BACK_FOCUS_SCHEME_A,
+            AppPrefs.MAIN_BACK_FOCUS_SCHEME_C,
+            -> (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
 
-        // Only handle the Back key when focus is inside the page content area.
-        val inContent = b.viewPager.hasFocus() && !b.tabLayout.hasFocus()
-        if (!inContent) return false
-
-        return when (scheme) {
-            AppPrefs.MAIN_BACK_FOCUS_SCHEME_A -> focusSelectedTab()
             AppPrefs.MAIN_BACK_FOCUS_SCHEME_B -> {
-                if (b.viewPager.currentItem != 0) {
+                val firstVisibleMyKey = MyTabs.all
+                    .mapNotNull { MyTabs.topNavigationKeyFor(it.key) }
+                    .firstOrNull { it in BiliClient.prefs.topNavigationVisibleKeys }
+                if (firstVisibleMyKey != null && currentTopNavigationKey() != firstVisibleMyKey) {
                     pendingFocusFirstItemFromContentSwitch = true
-                    // Use non-smooth switch: smooth scrolling may trigger intermediate onPageSelected callbacks
-                    // and consume the pending focus restore on the wrong page.
-                    b.viewPager.setCurrentItem(0, false)
-                    true
+                    selectTopNavigationKey(firstVisibleMyKey)
                 } else {
-                    (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+                    (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
                 }
             }
-            AppPrefs.MAIN_BACK_FOCUS_SCHEME_C -> {
-                (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
-            }
-            else -> focusSelectedTab()
+
+            else -> (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
         }
     }
 
     override fun onDestroyView() {
-        pageCallback?.let { binding.viewPager.unregisterOnPageChangeCallback(it) }
+        pageCallback?.let { _binding?.viewPager?.unregisterOnPageChangeCallback(it) }
         pageCallback = null
-        mediator?.detach()
-        mediator = null
-        tabs = emptyList()
         _binding = null
         super.onDestroyView()
     }

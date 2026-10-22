@@ -21,7 +21,7 @@ import blbl.cat3399.core.ui.requestFocusSelectedTab
 import blbl.cat3399.databinding.FragmentCustomPageBinding
 import blbl.cat3399.ui.BackPressHandler
 import blbl.cat3399.ui.RefreshKeyHandler
-import blbl.cat3399.ui.SidebarFocusHost
+import blbl.cat3399.ui.MainNavigationHost
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 
@@ -75,12 +75,12 @@ class CustomPageFragment : Fragment(), TabContentSwitchFocusHost, BackPressHandl
     override fun handleBackPressed(): Boolean {
         val b = _binding ?: return false
         if (tabs.isEmpty()) {
-            return (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+            return (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
         }
 
         val scheme = BiliClient.prefs.mainBackFocusScheme
         if (b.tabLayout.hasFocus()) {
-            return (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+            return (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
         }
 
         val inContent = b.viewPager.hasFocus() && !b.tabLayout.hasFocus()
@@ -100,12 +100,12 @@ class CustomPageFragment : Fragment(), TabContentSwitchFocusHost, BackPressHandl
                     b.viewPager.setCurrentItem(0, false)
                     true
                 } else {
-                    (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+                    (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
                 }
             }
 
             AppPrefs.MAIN_BACK_FOCUS_SCHEME_C -> {
-                (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+                (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
             }
 
             else -> focusSelectedTab()

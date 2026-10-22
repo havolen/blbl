@@ -15,7 +15,7 @@ import blbl.cat3399.feature.my.BangumiDetailActivity
 import blbl.cat3399.feature.video.removeVideoCardAndRestoreFocus
 import blbl.cat3399.ui.BackPressHandler
 import blbl.cat3399.ui.RefreshKeyHandler
-import blbl.cat3399.ui.SidebarFocusHost
+import blbl.cat3399.ui.MainNavigationHost
 
 class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
     private var _binding: FragmentSearchBinding? = null
@@ -70,7 +70,7 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
             true
         } else {
             // Search (input panel) behaves like Dynamic: Back in page content returns to the sidebar.
-            (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+            (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
         }
     }
 

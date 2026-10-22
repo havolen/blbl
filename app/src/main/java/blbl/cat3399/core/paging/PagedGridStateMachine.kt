@@ -88,6 +88,20 @@ class PagedGridStateMachine<K>(
         }
     }
 
+    /** Keep the old list usable when a replacement refresh fails. Never roll back a newer request. */
+    fun restoreCursorAfterFailedRefresh(previous: State<K>, expectedGeneration: Long) {
+        synchronized(lock) {
+            if (state.generation != expectedGeneration || state.isLoading) return
+            state = state.copy(nextKey = previous.nextKey, endReached = previous.endReached)
+        }
+    }
+
+    fun invalidatePendingLoads() {
+        synchronized(lock) {
+            state = state.copy(isLoading = false, generation = state.generation + 1)
+        }
+    }
+
     /**
      * Load the "next page" based on current [State.nextKey].
      *

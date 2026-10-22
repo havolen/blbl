@@ -33,7 +33,10 @@ internal fun RecyclerView.requestFocusFirstItemOrSelfAfterRefresh(
     return requestFocusAdapterPositionReliable(
         position = 0,
         smoothScroll = smoothScroll,
-        isAlive = isAlive,
+        isAlive = {
+            val current = rootView?.findFocus()
+            isAlive() && (current == null || FocusTreeUtils.isDescendantOf(current, this))
+        },
         onFocused = { onDone(true) },
     )
 }

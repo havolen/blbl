@@ -6,27 +6,28 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import blbl.cat3399.core.account.BiliSession
+import blbl.cat3399.core.ui.GridLoadState
+import blbl.cat3399.core.ui.GridFocusBookmark
+import kotlinx.coroutines.Job
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
-import blbl.cat3399.R
 import blbl.cat3399.core.api.BiliApi
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.model.BangumiSeason
 import blbl.cat3399.core.net.BiliClient
-import blbl.cat3399.core.ui.AppToast
-import blbl.cat3399.core.ui.TabContentSwitchFocusHost
 import blbl.cat3399.core.ui.DpadGridController
 import blbl.cat3399.core.ui.FocusTreeUtils
 import blbl.cat3399.core.ui.TabSwitchFocusTarget
 import blbl.cat3399.core.ui.postIfAlive
-import blbl.cat3399.core.ui.postIfAttached
 import blbl.cat3399.core.ui.requestFocusAdapterPositionReliable
 import blbl.cat3399.core.ui.requestFocusFirstItemOrSelfAfterRefresh
 import blbl.cat3399.databinding.FragmentVideoGridBinding
 import blbl.cat3399.feature.my.BangumiFollowAdapter
 import blbl.cat3399.feature.my.BangumiDetailActivity
+import blbl.cat3399.ui.MainNavigationHost
 import blbl.cat3399.ui.RefreshKeyHandler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -98,6 +99,13 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
 
     private var _binding: FragmentVideoGridBinding? = null
     private val binding get() = _binding!!
+    private var gridLoadState: GridLoadState? = null
+    private val focusBookmark = GridFocusBookmark()
+    private var loadJob: Job? = null
+    private var contentSessionRevision = BiliSession.state.value.revision
+    private var lastRequestWasRefresh = true
+    private data class RefreshCheckpoint(val key: PgcPagingKey, val hasNext: Boolean, val ids: Set<Long>)
+    private var refreshCheckpoint: RefreshCheckpoint? = null
 
     private val source: PgcGridSource by lazy { sourceFromArguments(requireArguments()) }
 
@@ -134,8 +142,13 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
         }
 
         binding.recycler.adapter = adapter
+        gridLoadState = GridLoadState(binding, "暂无可显示的影视内容", activity as? MainNavigationHost, { isResumed }) {
+            gridLoadState?.loading()
+            if (lastRequestWasRefresh || adapter.itemCount == 0) resetAndLoad() else loadNextPage()
+        }
         binding.recycler.setHasFixedSize(true)
         binding.recycler.layoutManager = GridLayoutManager(requireContext(), spanCountForPgc())
+        focusBookmark.attach(binding.recycler, savedInstanceState)
         (binding.recycler.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
         binding.recycler.clearOnScrollListeners()
         dpadGridController?.release()
@@ -157,7 +170,7 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
                             switchToNextTabFromContentEdge()
                         }
 
-                        override fun canLoadMore(): Boolean = hasNext
+                        override fun canLoadMore(): Boolean = gridLoadState?.hasFailure != true && hasNext
 
                         override fun loadMore() {
                             loadNextPage()
@@ -187,6 +200,15 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
 
     override fun onResume() {
         super.onResume()
+        val revision = BiliSession.state.value.revision
+        if (contentSessionRevision != revision) {
+            contentSessionRevision = revision
+            loadJob?.cancel()
+            binding.swipeRefresh.isRefreshing = false
+            adapter.submit(emptyList())
+            initialLoadTriggered = false
+            refreshCheckpoint = null
+        }
         (binding.recycler.layoutManager as? GridLayoutManager)?.spanCount = spanCountForPgc()
         maybeTriggerInitialLoad()
         restoreFocusIfNeeded()
@@ -205,32 +227,57 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
     private fun spanCountForPgc(): Int = BiliClient.prefs.pgcGridSpanCount.coerceIn(1, 6)
 
     override fun requestFocusFirstCardFromTab(): Boolean {
+        focusBookmark.beginFocusRequest(activity?.currentFocus)
+        val b = _binding
+        if (b != null && isResumed) {
+            if (adapter.itemCount == 0 && b.btnRetry.isShown && b.btnRetry.requestFocus()) {
+                clearPendingFocusFlags()
+                return true
+            }
+            if (focusBookmark.requestFocus(b.recycler) { _binding === b && isResumed }) {
+                clearPendingFocusFlags()
+                return true
+            }
+        }
         pendingFocusFirstCardFromTab = true
         pendingFocusFirstCardFromContentSwitch = false
         pendingFocusFirstCardFromBackToTab0 = false
         pendingRestorePosition = null
         if (!isResumed) return true
-        return maybeConsumePendingFocusFirstCard()
+        return maybeConsumePendingFocusFirstCard(allowFromNavigation = true)
     }
 
     override fun requestFocusFirstCardFromContentSwitch(): Boolean {
+        focusBookmark.beginFocusRequest(activity?.currentFocus)
+        val b = _binding
+        if (b != null && isResumed) {
+            if (adapter.itemCount == 0 && b.btnRetry.isShown && b.btnRetry.requestFocus()) {
+                clearPendingFocusFlags()
+                return true
+            }
+            if (focusBookmark.requestFocus(b.recycler) { _binding === b && isResumed }) {
+                clearPendingFocusFlags()
+                return true
+            }
+        }
         pendingFocusFirstCardFromContentSwitch = true
         pendingFocusFirstCardFromTab = false
         pendingFocusFirstCardFromBackToTab0 = false
         if (!isResumed) return true
-        return maybeConsumePendingFocusFirstCard()
+        return maybeConsumePendingFocusFirstCard(allowFromNavigation = true)
     }
 
     override fun requestFocusFirstCardFromBackToTab0(): Boolean {
+        focusBookmark.beginFocusRequest(activity?.currentFocus)
         pendingFocusFirstCardFromBackToTab0 = true
         pendingFocusFirstCardFromTab = false
         pendingFocusFirstCardFromContentSwitch = false
         pendingRestorePosition = null
         if (!isResumed) return true
-        return maybeConsumePendingFocusFirstCard()
+        return maybeConsumePendingFocusFirstCard(allowFromNavigation = true)
     }
 
-    private fun maybeConsumePendingFocusFirstCard(): Boolean {
+    private fun maybeConsumePendingFocusFirstCard(allowFromNavigation: Boolean = false): Boolean {
         if (!pendingFocusFirstCardFromTab && !pendingFocusFirstCardFromContentSwitch && !pendingFocusFirstCardFromBackToTab0) return false
         if (!isAdded || _binding == null) return false
         if (!isResumed) return false
@@ -238,6 +285,10 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
         if (pendingRestorePosition != null) return false
 
         val focused = activity?.currentFocus
+        if (!allowFromNavigation && !focusBookmark.canApplyFocusRequest(binding.recycler)) {
+            clearPendingFocusFlags()
+            return false
+        }
         if (focused != null && focused != binding.recycler && FocusTreeUtils.isDescendantOf(focused, binding.recycler)) {
             // If we are already focused inside the grid, consider the request satisfied, except for
             // "Back -> tab0 content" which must deterministically land on the first card.
@@ -256,13 +307,8 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
             }
         }
 
-        val parentView = parentFragment?.view
-        val tabLayout =
-            parentView?.findViewById<com.google.android.material.tabs.TabLayout?>(R.id.tab_layout)
         if (pendingFocusFirstCardFromTab) {
-            if (focused == null || tabLayout == null || !FocusTreeUtils.isDescendantOf(focused, tabLayout)) {
-                pendingFocusFirstCardFromTab = false
-            }
+            pendingFocusFirstCardFromTab = false
         }
 
         if (adapter.itemCount <= 0) {
@@ -292,6 +338,7 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
     }
 
     private fun clearPendingFocusFlags() {
+        focusBookmark.finishFocusRequest()
         pendingFocusFirstCardFromTab = false
         pendingFocusFirstCardFromContentSwitch = false
         pendingFocusFirstCardFromBackToTab0 = false
@@ -327,6 +374,9 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
     }
 
     private fun resetAndLoad(fromUserRefresh: Boolean = false) {
+        contentSessionRevision = BiliSession.state.value.revision
+        loadJob?.cancel()
+        refreshCheckpoint = if (adapter.itemCount > 0) RefreshCheckpoint(nextKey, hasNext, loadedSeasonIds.toSet()) else null
         isLoadingMore = false
         nextKey = PgcPagingKey()
         hasNext = true
@@ -339,19 +389,24 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
             clearPendingFocusFlags()
             dpadGridController?.parkFocusForDataSetReset()
         }
-        adapter.submit(emptyList())
         loadNextPage(isRefresh = true)
     }
 
     private fun loadNextPage(isRefresh: Boolean = false) {
+        if (gridLoadState?.hasFailure == true && !isRefresh) return
         if (isLoadingMore || !hasNext) return
         val token = requestToken
         isLoadingMore = true
-        viewLifecycleOwner.lifecycleScope.launch {
+        val requestBinding = binding
+        val sessionRevision = BiliSession.state.value.revision
+        lastRequestWasRefresh = isRefresh
+        gridLoadState?.loading()
+        loadJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val fetched = source.fetch(nextKey)
-                if (token != requestToken) return@launch
+                if (token != requestToken || _binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
 
+                if (isRefresh) refreshCheckpoint = null
                 nextKey = fetched.nextKey
                 hasNext = fetched.hasNext
 
@@ -386,13 +441,25 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
                 restoreFocusIfNeeded()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
+                if (_binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
+                if (isRefresh) restoreRefreshCheckpoint()
+                pendingFocusFirstCardAfterRefresh = false
                 AppLog.e("PgcRecommend", "load failed source=${source.logName} key=$nextKey", t)
-                context?.let { AppToast.show(it, "加载失败，可查看 Logcat(标签 BLBL)") }
+                gridLoadState?.failure(t, sessionRevision)
             } finally {
-                if (token == requestToken) _binding?.swipeRefresh?.isRefreshing = false
-                isLoadingMore = false
+                if (token == requestToken && _binding === requestBinding) _binding?.swipeRefresh?.isRefreshing = false
+                if (token == requestToken) isLoadingMore = false
             }
         }
+    }
+
+    private fun restoreRefreshCheckpoint() {
+        val previous = refreshCheckpoint ?: return
+        nextKey = previous.key
+        hasNext = previous.hasNext
+        loadedSeasonIds.clear()
+        loadedSeasonIds.addAll(previous.ids)
+        refreshCheckpoint = null
     }
 
     private fun openBangumiDetail(season: BangumiSeason) {
@@ -405,6 +472,10 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
     }
 
     private fun restoreFocusIfNeeded() {
+        val b = _binding ?: return
+        if (!isResumed) return
+        val focus = activity?.currentFocus
+        if (focus != null && !FocusTreeUtils.isDescendantOf(focus, b.root)) return
         val pos = pendingRestorePosition ?: return
         if (_binding == null) return
         if (pos < 0 || pos >= adapter.itemCount) return
@@ -419,49 +490,34 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
     }
 
     private fun focusSelectedTabIfAvailable(): Boolean {
-        val parentView = parentFragment?.view ?: return false
-        val tabLayout = parentView.findViewById<com.google.android.material.tabs.TabLayout?>(R.id.tab_layout) ?: return false
-        val tabStrip = tabLayout.getChildAt(0) as? ViewGroup ?: return false
-        val pos = tabLayout.selectedTabPosition.takeIf { it >= 0 } ?: 0
-        tabStrip.getChildAt(pos)?.requestFocus() ?: return false
-        return true
+        captureCurrentFocusedAdapterPosition()
+        return (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
     }
 
     private fun switchToNextTabFromContentEdge(): Boolean {
-        val parentView = parentFragment?.view ?: return false
-        val tabLayout = parentView.findViewById<com.google.android.material.tabs.TabLayout?>(R.id.tab_layout) ?: return false
-        if (tabLayout.tabCount <= 1) return false
-        val tabStrip = tabLayout.getChildAt(0) as? ViewGroup ?: return false
-        val cur = tabLayout.selectedTabPosition.takeIf { it >= 0 } ?: 0
-        val next = cur + 1
-        if (next >= tabLayout.tabCount) return false
         captureCurrentFocusedAdapterPosition()
-        tabLayout.getTabAt(next)?.select() ?: return false
-        tabLayout.postIfAttached {
-            (parentFragment as? TabContentSwitchFocusHost)?.requestFocusCurrentPagePrimaryItemFromContentSwitch()
-                ?: tabStrip.getChildAt(next)?.requestFocus()
-        }
-        return true
+        return (activity as? MainNavigationHost)?.requestFocusTopNavigationAdjacent(1) == true
     }
 
     private fun switchToPrevTabFromContentEdge(): Boolean {
-        val parentView = parentFragment?.view ?: return false
-        val tabLayout = parentView.findViewById<com.google.android.material.tabs.TabLayout?>(R.id.tab_layout) ?: return false
-        if (tabLayout.tabCount <= 1) return false
-        val tabStrip = tabLayout.getChildAt(0) as? ViewGroup ?: return false
-        val cur = tabLayout.selectedTabPosition.takeIf { it >= 0 } ?: 0
-        val prev = cur - 1
-        if (prev < 0) return false
         captureCurrentFocusedAdapterPosition()
-        tabLayout.getTabAt(prev)?.select() ?: return false
-        tabLayout.postIfAttached {
-            (parentFragment as? TabContentSwitchFocusHost)?.requestFocusCurrentPagePrimaryItemFromContentSwitch()
-                ?: tabStrip.getChildAt(prev)?.requestFocus()
-        }
-        return true
+        return (activity as? MainNavigationHost)?.requestFocusTopNavigationAdjacent(-1) == true
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        _binding?.let { focusBookmark.save(it.recycler, outState) }
     }
 
     override fun onDestroyView() {
+        _binding?.let { focusBookmark.detach(it.recycler) }
+        restoreRefreshCheckpoint()
+        isLoadingMore = false
+        loadJob?.cancel()
+        loadJob = null
+        gridLoadState?.release()
+        gridLoadState = null
+        requestToken++
         initialLoadTriggered = false
         pendingRestorePosition = null
         pendingFocusFirstCardFromTab = false

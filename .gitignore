@@ -16,5 +16,12 @@ local.properties
 
 *.apk
 keystore/
-docs/
 libs/
+
+# Local notes: conversation logs, device validation records and personal tools
+local-notes/
+
+# Local scratch files
+.workbuddy/
+nodeseek_vps_deals_*
+~$*

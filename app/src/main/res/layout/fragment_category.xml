@@ -7,7 +7,7 @@
 
     <blbl.cat3399.core.ui.UserScaleTabLayout
         android:id="@+id/tab_layout"
-        style="@style/Widget.Blbl.TabLayout"
+        style="@style/Widget.Blbl.SectionTabLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"

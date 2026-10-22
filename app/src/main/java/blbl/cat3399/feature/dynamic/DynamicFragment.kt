@@ -42,7 +42,7 @@ import blbl.cat3399.feature.video.openVideoFromPlaybackHandle
 import blbl.cat3399.feature.video.removeVideoCardAndRestoreFocus
 import blbl.cat3399.ui.BackPressHandler
 import blbl.cat3399.ui.RefreshKeyHandler
-import blbl.cat3399.ui.SidebarFocusHost
+import blbl.cat3399.ui.MainNavigationHost
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -601,7 +601,7 @@ class DynamicFragment : Fragment(), RefreshKeyHandler, BackPressHandler {
         val root = _binding?.root ?: _bindingLogin?.root ?: return false
         val focused = activity?.currentFocus ?: return false
         if (!FocusTreeUtils.isDescendantOf(focused, root)) return false
-        return (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+        return (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
     }
 
     override fun handleRefreshKey(): Boolean {

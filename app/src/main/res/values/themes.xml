@@ -1,19 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Application-level fallback theme: Default preset (Dark + Violet accent). -->
+    <!-- Application-level fallback theme: Dark + soft pink accent. -->
     <style name="Theme.Blbl" parent="Theme.Blbl.Base.Dark">
-        <item name="blblAccent">@color/blbl_purple</item>
-        <item name="blblAccentContainer">@color/blbl_accent_violet_container</item>
-        <item name="blblAccentWeak">@color/blbl_accent_violet_weak</item>
-        <item name="blblAccentPressed">@color/blbl_accent_violet_pressed</item>
+        <item name="blblAccent">@color/blbl_accent_dark_soft_pink</item>
+        <item name="blblAccentContainer">@color/blbl_accent_dark_soft_pink_container</item>
+        <item name="blblAccentWeak">@color/blbl_accent_dark_soft_pink_weak</item>
+        <item name="blblAccentPressed">@color/blbl_accent_dark_soft_pink_pressed</item>
+        <item name="colorOnSecondary">@color/blbl_on_dark_soft_pink</item>
     </style>
 
     <style name="Theme.Blbl.Base" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Use the platform sans family consistently; Chinese glyphs use the system CJK fallback. -->
+        <item name="android:fontFamily">sans-serif</item>
         <!-- Accent (overridden by preset overlay). -->
-        <item name="blblAccent">@color/blbl_purple</item>
-        <item name="blblAccentContainer">@color/blbl_accent_violet_container</item>
-        <item name="blblAccentWeak">@color/blbl_accent_violet_weak</item>
-        <item name="blblAccentPressed">@color/blbl_accent_violet_pressed</item>
+        <item name="blblAccent">@color/blbl_accent_dark_soft_pink</item>
+        <item name="blblAccentContainer">@color/blbl_accent_dark_soft_pink_container</item>
+        <item name="blblAccentWeak">@color/blbl_accent_dark_soft_pink_weak</item>
+        <item name="blblAccentPressed">@color/blbl_accent_dark_soft_pink_pressed</item>
         <item name="blblPageBackdrop">?attr/colorBackground</item>
         <item name="blblDialogSurface">?attr/colorSurface</item>
         <item name="blblOnPageBackdrop">?attr/colorOnSurface</item>
@@ -25,10 +28,14 @@
         <item name="colorControlHighlight">?attr/blblAccentContainer</item>
 
         <!-- Focus resources (overridden by Player fixed theme). -->
-        <item name="blblFocusBgRound">@drawable/blbl_focus_bg_round_white</item>
-        <item name="blblFocusListSelectorRound">@drawable/blbl_focus_list_selector_round_white</item>
-        <item name="blblFocusStrokeColor">@color/blbl_focus_stroke_white</item>
-        <item name="blblFocusStrokeFocusOnlyColor">@color/blbl_focus_stroke_focus_only_white</item>
+        <item name="blblFocusBgRound">@drawable/blbl_focus_bg_round_dark_soft_pink</item>
+        <item name="blblFocusListSelectorRound">@drawable/blbl_focus_list_selector_round_dark_soft_pink</item>
+        <item name="blblFocusStrokeColor">@color/blbl_focus_stroke_dark_soft_pink</item>
+        <item name="blblFocusStrokeFocusOnlyColor">@color/blbl_focus_stroke_focus_only_dark_soft_pink</item>
+        <item name="blblNavigationSelectedBackground">?attr/blblAccentContainer</item>
+        <item name="blblNavigationSelectedText">?attr/blblOnPageBackdrop</item>
+        <item name="blblNavigationFocusBackground">?attr/blblAccent</item>
+        <item name="blblNavigationFocusText">?attr/colorOnSecondary</item>
 
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.Blbl.MaterialAlertDialog</item>
         <item name="alertDialogTheme">@style/ThemeOverlay.Blbl.MaterialAlertDialog</item>
@@ -46,15 +53,15 @@
         <item name="colorBackground">@color/blbl_bg</item>
         <item name="blblContentBackground">?attr/colorBackground</item>
         <item name="colorSurface">@color/blbl_surface</item>
-        <item name="colorOnSurface">@color/blbl_text</item>
+        <item name="colorOnSurface">@color/blbl_text_dark_soft_pink</item>
         <item name="blblDialogSurface">@color/blbl_surface</item>
-        <item name="blblOnPageBackdrop">@color/blbl_text</item>
+        <item name="blblOnPageBackdrop">@color/blbl_text_dark_soft_pink</item>
         <item name="blblOnPageBackdropSecondary">@color/blbl_text_secondary</item>
 
         <item name="android:statusBarColor">@color/blbl_bg</item>
         <item name="android:navigationBarColor">@color/blbl_bg</item>
         <item name="android:windowBackground">@color/blbl_bg</item>
-        <item name="android:textColorPrimary">@color/blbl_text</item>
+        <item name="android:textColorPrimary">@color/blbl_text_dark_soft_pink</item>
         <item name="android:textColorSecondary">@color/blbl_text_secondary</item>
     </style>
 
@@ -112,6 +119,10 @@
         <item name="blblAccentContainer">@color/blbl_accent_blue_container</item>
         <item name="blblAccentWeak">@color/blbl_accent_blue_weak</item>
         <item name="blblAccentPressed">@color/blbl_accent_blue_pressed</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+        <item name="colorOnSurface">@color/blbl_text</item>
+        <item name="blblOnPageBackdrop">@color/blbl_text</item>
+        <item name="android:textColorPrimary">@color/blbl_text</item>
 
         <item name="blblFocusBgRound">@drawable/blbl_focus_bg_round</item>
         <item name="blblFocusListSelectorRound">@drawable/blbl_focus_list_selector_round</item>

@@ -53,9 +53,7 @@ import blbl.cat3399.feature.risk.GaiaVgateActivity
 import blbl.cat3399.feature.category.CategoryZones
 import blbl.cat3399.feature.custom.CustomPageSearchSourceKind
 import blbl.cat3399.feature.custom.CustomPageTabRegistry
-import blbl.cat3399.feature.home.HomeTabs
 import blbl.cat3399.feature.live.LiveFragment
-import blbl.cat3399.feature.my.MyTabs
 import blbl.cat3399.ui.MainRootNavRegistry
 import blbl.cat3399.ui.MainActivity
 import kotlinx.coroutines.CancellationException
@@ -777,22 +775,16 @@ class SettingsInteractionHandler(
 
             SettingId.TabSwitchFollowsFocus -> {
                 prefs.tabSwitchFollowsFocus = !prefs.tabSwitchFollowsFocus
-                AppToast.show(activity, "tab跟随焦点切换：${if (prefs.tabSwitchFollowsFocus) "开" else "关"}")
-                renderer.refreshSection(entry.id)
-            }
-
-            SettingId.MainAutoHideSidebarOnEnterContent -> {
-                prefs.mainAutoHideSidebarOnEnterContent = !prefs.mainAutoHideSidebarOnEnterContent
-                AppToast.show(activity, "进入内容区后关闭侧边栏：${if (prefs.mainAutoHideSidebarOnEnterContent) "开" else "关"}")
+                AppToast.show(activity, "导航跟随焦点切换：${if (prefs.tabSwitchFollowsFocus) "开" else "关"}")
                 renderer.refreshSection(entry.id)
             }
 
             SettingId.MainBackFocusScheme -> {
                 val options =
                     listOf(
-                        blbl.cat3399.core.prefs.AppPrefs.MAIN_BACK_FOCUS_SCHEME_A to "回到当前所属Tab",
-                        blbl.cat3399.core.prefs.AppPrefs.MAIN_BACK_FOCUS_SCHEME_B to "回到Tab0内容区",
-                        blbl.cat3399.core.prefs.AppPrefs.MAIN_BACK_FOCUS_SCHEME_C to "回到侧边栏",
+                        blbl.cat3399.core.prefs.AppPrefs.MAIN_BACK_FOCUS_SCHEME_A to "回到当前页面分区",
+                        blbl.cat3399.core.prefs.AppPrefs.MAIN_BACK_FOCUS_SCHEME_B to "回到推荐内容区",
+                        blbl.cat3399.core.prefs.AppPrefs.MAIN_BACK_FOCUS_SCHEME_C to "回到顶部导航",
                     )
                 showChoiceDialog(
                     title = "返回键焦点策略",
@@ -830,17 +822,20 @@ class SettingsInteractionHandler(
 
             SettingId.StartupPage -> {
                 val options =
-                    MainRootNavRegistry.startupSpecs().map { spec ->
-                        (spec.startupPageKey ?: AppPrefs.STARTUP_PAGE_HOME) to activity.getString(spec.titleRes)
-                    }
+                    listOf(blbl.cat3399.core.navigation.MainNavigationKeys.LAST_VISITED to "恢复上次浏览页面") +
+                        MainRootNavRegistry.allTopNavItems(activity)
+                            .filter { it.key in prefs.topNavigationVisibleKeys }
+                            .map { it.key to it.title } +
+                        (blbl.cat3399.core.navigation.MainNavigationKeys.MY_ACCOUNT to "我的")
                 showChoiceDialog(
                     title = "启动默认页",
                     items = options.map { it.second },
-                    current = SettingsText.startupPageText(activity, prefs.startupPage),
+                    current = options.firstOrNull { it.first == prefs.startupPage }?.second
+                        ?: options.firstOrNull { it.first == MainRootNavRegistry.resolveLaunchTopNavKey(prefs.startupPage) }?.second.orEmpty(),
                 ) { selected ->
                     val key =
                         options.firstOrNull { it.second == selected }?.first
-                            ?: blbl.cat3399.core.prefs.AppPrefs.STARTUP_PAGE_HOME
+                            ?: blbl.cat3399.core.navigation.MainNavigationKeys.RECOMMEND
                     prefs.startupPage = key
                     AppToast.show(activity, "启动默认页：$selected（下次启动生效）")
                     renderer.refreshSection(entry.id)
@@ -874,14 +869,16 @@ class SettingsInteractionHandler(
                 }
             }
 
-            SettingId.MainHomeVisibleTabs -> {
+            SettingId.TopNavigationItems -> {
                 showVisibleTabsDialog(
                     sectionIndex = state.currentSectionIndex,
                     focusId = entry.id,
-                    title = "主页显示页面",
-                    options = HomeTabs.all.map { it.key to activity.getString(it.titleRes) },
-                    selectedKeys = prefs.mainHomeVisibleTabs,
-                ) { prefs.mainHomeVisibleTabs = it }
+                    title = "侧边导航显示项",
+                    options = MainRootNavRegistry.allTopNavItems(activity).map { it.key to it.title },
+                    selectedKeys = prefs.topNavigationVisibleKeys,
+                ) { selectedKeys ->
+                    prefs.topNavigationVisibleKeys = selectedKeys
+                }
             }
 
             SettingId.MainCategoryVisibleTabs -> {
@@ -904,15 +901,6 @@ class SettingsInteractionHandler(
                 ) { prefs.mainLiveVisibleTabs = it }
             }
 
-            SettingId.MainMyVisibleTabs -> {
-                showVisibleTabsDialog(
-                    sectionIndex = state.currentSectionIndex,
-                    focusId = entry.id,
-                    title = "我的页显示页面",
-                    options = MyTabs.all.map { it.key to activity.getString(it.titleRes) },
-                    selectedKeys = prefs.mainMyVisibleTabs,
-                ) { prefs.mainMyVisibleTabs = it }
-            }
 
             SettingId.UiScaleFactor -> {
                 val factors = (70..140 step 5).map { it / 100f }
@@ -1683,12 +1671,16 @@ class SettingsInteractionHandler(
             items = labels,
             checked = checked,
             minCheckedCount = 1,
+            showStatusText = focusId == SettingId.TopNavigationItems,
             onChanged = { finalChecked ->
                 save(
                     keys.filterIndexed { idx, _ ->
                         idx in finalChecked.indices && finalChecked[idx]
                     },
                 )
+            },
+            onMinCheckedRejected = {
+                if (focusId == SettingId.TopNavigationItems) AppToast.show(activity, "至少保留一个侧边导航入口")
             },
             onDismiss = {
                 renderer.showSection(sectionIndex, focusId = focusId)

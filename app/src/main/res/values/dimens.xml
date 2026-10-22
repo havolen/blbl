@@ -28,6 +28,13 @@
     <dimen name="sidebar_nav_item_height_selected">84dp</dimen>
     <dimen name="sidebar_nav_item_height_labeled">72dp</dimen>
 
+    <!-- Keep the persistent navigation capsule row clear of page content. -->
+    <dimen name="main_content_top_inset">72dp</dimen>
+
+    <!-- Main navigation -->
+    <dimen name="top_nav_icon_label_gap">12dp</dimen>
+    <dimen name="top_nav_icon_size">22dp</dimen>
+
     <!-- Video card -->
     <dimen name="video_card_margin">8dp</dimen>
     <dimen name="video_card_text_margin">10dp</dimen>

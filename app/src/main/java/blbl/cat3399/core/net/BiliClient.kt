@@ -2,6 +2,7 @@ package blbl.cat3399.core.net
 
 import android.content.Context
 import blbl.cat3399.core.account.AccountSessionStore
+import blbl.cat3399.core.account.BiliSession
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.prefs.AppPrefs
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 object BiliClient {
+    private data class RequestSession(val revision: Long)
     private const val TAG = "BiliClient"
     private const val BASE = "https://api.bilibili.com"
     private const val HDR_SKIP_ORIGIN = "X-Blbl-Skip-Origin"
@@ -59,9 +61,25 @@ object BiliClient {
         prefs = AppPrefs(context.applicationContext)
         accounts = AccountSessionStore(context.applicationContext)
         cookies = CookieStore(context.applicationContext)
+        cookies.onCredentialsChanged = BiliSession::syncCredentials
+        BiliSession.syncCredentials()
         val dns = ipv4OnlyDns { prefs.ipv4OnlyEnabled }
         val baseClient = OkHttpClient.Builder()
             .cookieJar(cookies)
+            .addInterceptor { chain ->
+                // Tag before OkHttp reads cookies, so an account switch before network I/O is covered too.
+                val request = chain.request().newBuilder()
+                    .tag(RequestSession::class.java, RequestSession(BiliSession.state.value.revision))
+                    .build()
+                chain.proceed(request)
+            }
+            .addNetworkInterceptor { chain ->
+                val revision = chain.request().tag(RequestSession::class.java)?.revision
+                val response = chain.proceed(chain.request())
+                // A response from a previous account must not restore its cookies after a switch.
+                if (revision == BiliSession.state.value.revision) response
+                else response.newBuilder().removeHeader("Set-Cookie").build()
+            }
             .dns(dns)
             .connectTimeout(12, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)

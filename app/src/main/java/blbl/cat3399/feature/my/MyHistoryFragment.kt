@@ -7,6 +7,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import blbl.cat3399.core.account.BiliSession
+import blbl.cat3399.core.ui.GridLoadState
+import blbl.cat3399.core.ui.GridFocusBookmark
+import kotlinx.coroutines.Job
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -40,6 +44,7 @@ import blbl.cat3399.feature.video.hasVideoDetailIdentity
 import blbl.cat3399.feature.video.historyVideoCardPlaylistItem
 import blbl.cat3399.feature.video.openVideoDetailFromPlaybackHandle
 import blbl.cat3399.feature.video.openVideoFromPlaybackHandle
+import blbl.cat3399.ui.MainNavigationHost
 import blbl.cat3399.ui.RefreshKeyHandler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -52,6 +57,11 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
 
     private var _binding: FragmentVideoGridBinding? = null
     private val binding get() = _binding!!
+    private var gridLoadState: GridLoadState? = null
+    private val focusBookmark = GridFocusBookmark()
+    private var loadJob: Job? = null
+    private var lastRequestWasRefresh = true
+    private var refreshCheckpoint: PagedGridStateMachine.State<BiliApi.HistoryCursor?>? = null
 
     private lateinit var adapter: HistoryAdapter
 
@@ -106,8 +116,13 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
                 )
         }
         binding.recycler.adapter = adapter
+        gridLoadState = GridLoadState(binding, "还没有观看历史", activity as? MainNavigationHost, { isResumed }) {
+            gridLoadState?.loading()
+            if (lastRequestWasRefresh || adapter.itemCount == 0) resetAndLoad() else loadNextPage()
+        }
         binding.recycler.setHasFixedSize(true)
         binding.recycler.layoutManager = GridLayoutManager(requireContext(), spanCountForWidth(resources))
+        focusBookmark.attach(binding.recycler, savedInstanceState)
         (binding.recycler.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
         binding.recycler.clearOnScrollListeners()
         binding.recycler.addOnScrollListener(
@@ -143,7 +158,7 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
                             switchToNextMyTabFromContentEdge()
                         }
 
-                        override fun canLoadMore(): Boolean = !paging.snapshot().endReached
+                        override fun canLoadMore(): Boolean = gridLoadState?.hasFailure != true && !paging.snapshot().endReached
 
                         override fun loadMore() {
                             loadNextPage()
@@ -161,7 +176,7 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
                 isEnabled = { _binding != null && isResumed },
                 canLoadMore = {
                     val s = paging.snapshot()
-                    !s.isLoading && !s.endReached
+                    gridLoadState?.hasFailure != true && !s.isLoading && !s.endReached
                 },
                 loadMore = { loadNextPage() },
             )
@@ -193,20 +208,40 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
     }
 
     override fun requestFocusFirstItemFromTabSwitch(): Boolean {
+        focusBookmark.beginFocusRequest(activity?.currentFocus)
+        val b = _binding
+        if (b != null && isResumed) {
+            if (adapter.itemCount == 0 && b.btnRetry.isShown && b.btnRetry.requestFocus()) {
+                pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
+                return true
+            }
+            if (focusBookmark.requestFocus(b.recycler) { _binding === b && isResumed }) {
+                pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
+                return true
+            }
+        }
         pendingFocusFirstItemFromTabSwitch = true
         if (!isResumed) return true
-        return maybeConsumePendingFocusFirstItemFromTabSwitch()
+        return maybeConsumePendingFocusFirstItemFromTabSwitch(allowFromNavigation = true)
     }
 
-    private fun maybeConsumePendingFocusFirstItemFromTabSwitch(): Boolean {
+    private fun maybeConsumePendingFocusFirstItemFromTabSwitch(allowFromNavigation: Boolean = false): Boolean {
         if (!pendingFocusFirstItemFromTabSwitch) return false
         if (!isAdded || _binding == null) return false
         if (!isResumed) return false
         if (!this::adapter.isInitialized) return false
 
         val focused = activity?.currentFocus
+        if (!allowFromNavigation && !focusBookmark.canApplyFocusRequest(binding.recycler)) {
+            pendingFocusFirstItemFromTabSwitch = false
+            focusBookmark.finishFocusRequest()
+            return false
+        }
         if (focused != null && focused != binding.recycler && FocusTreeUtils.isDescendantOf(focused, binding.recycler)) {
             pendingFocusFirstItemFromTabSwitch = false
+            focusBookmark.finishFocusRequest()
             return false
         }
 
@@ -216,17 +251,19 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
         }
 
         val recycler = binding.recycler
-        recycler.postIfAlive(isAlive = { _binding != null }) {
+        recycler.postIfAlive(isAlive = { _binding != null && isResumed && focusBookmark.canApplyFocusRequest(recycler) }) {
             val vh = recycler.findViewHolderForAdapterPosition(0)
             if (vh != null) {
                 vh.itemView.requestFocus()
                 pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
                 return@postIfAlive
             }
             recycler.scrollToPosition(0)
-            recycler.postIfAlive(isAlive = { _binding != null }) {
+            recycler.postIfAlive(isAlive = { _binding != null && isResumed && focusBookmark.canApplyFocusRequest(recycler) }) {
                 recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() ?: recycler.requestFocus()
                 pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
             }
         }
         return true
@@ -245,13 +282,15 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
     }
 
     private fun resetAndLoad() {
+        loadJob?.cancel()
         if (pendingFocusFirstItemAfterRefresh) {
             dpadGridController?.parkFocusForDataSetReset()
         }
+        loadJob?.cancel()
+        refreshCheckpoint = paging.snapshot().takeIf { adapter.itemCount > 0 }
         paging.reset()
         loadedKeys.clear()
         dpadGridController?.clearPendingFocusAfterLoadMore()
-        adapter.submit(emptyList())
         loadNextPage(isRefresh = true)
     }
 
@@ -261,6 +300,8 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
         if (adapter.itemCount <= 0) return
         if (b.swipeRefresh.isRefreshing) return
         if (paging.snapshot().isLoading) return
+        loadJob?.cancel()
+        refreshCheckpoint = paging.snapshot().takeIf { adapter.itemCount > 0 }
         paging.reset()
         loadedKeys.clear()
         dpadGridController?.clearPendingFocusAfterLoadMore()
@@ -280,10 +321,15 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
         refreshPresentation: RefreshPresentation = RefreshPresentation.ResetToServerOrder,
     ) {
         val preserveCurrentOrderRefresh = isRefresh && refreshPresentation == RefreshPresentation.PreserveCurrentOrder
+        if (gridLoadState?.hasFailure == true && !isRefresh) return
         val startSnap = paging.snapshot()
         if (startSnap.isLoading || startSnap.endReached) return
         val startGen = startSnap.generation
-        viewLifecycleOwner.lifecycleScope.launch {
+        val requestBinding = binding
+        val sessionRevision = BiliSession.state.value.revision
+        lastRequestWasRefresh = isRefresh
+        gridLoadState?.loading()
+        loadJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val result =
                     paging.loadNextPage(
@@ -319,7 +365,10 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
                         },
                     )
 
+                if (_binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
                 val applied = result.appliedOrNull() ?: return@launch
+                if (isRefresh) refreshCheckpoint = null
+                gridLoadState?.content()
                 if (applied.items.isEmpty()) {
                     if (applied.isRefresh) {
                         if (preserveCurrentOrderRefresh) {
@@ -374,11 +423,17 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
 
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
-                if (preserveCurrentOrderRefresh) resetLoadedKeysFromAdapter()
+                if (_binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
+                if (isRefresh) {
+                    refreshCheckpoint?.let { paging.restoreCursorAfterFailedRefresh(it, startGen) }
+                    refreshCheckpoint = null
+                    resetLoadedKeysFromAdapter()
+                }
+                pendingFocusFirstItemAfterRefresh = false
                 AppLog.e("MyHistory", "load failed", t)
-                context?.let { AppToast.show(it, "加载失败，可查看 Logcat(标签 BLBL)") }
+                gridLoadState?.failure(t, sessionRevision)
             } finally {
-                if (paging.snapshot().generation == startGen) _binding?.swipeRefresh?.isRefreshing = false
+                if (paging.snapshot().generation == startGen && _binding === requestBinding) _binding?.swipeRefresh?.isRefreshing = false
             }
         }
     }
@@ -388,7 +443,21 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
         loadedKeys.addAll(adapter.stableKeysSnapshot())
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        _binding?.let { focusBookmark.save(it.recycler, outState) }
+    }
+
     override fun onDestroyView() {
+        _binding?.let { focusBookmark.detach(it.recycler) }
+        loadJob?.cancel()
+        loadJob = null
+        gridLoadState?.release()
+        gridLoadState = null
+        paging.invalidatePendingLoads()
+        refreshCheckpoint?.let { paging.restoreCursorAfterFailedRefresh(it, paging.snapshot().generation) }
+        refreshCheckpoint = null
+        resetLoadedKeysFromAdapter()
         initialLoadTriggered = false
         dpadGridController?.release()
         dpadGridController = null

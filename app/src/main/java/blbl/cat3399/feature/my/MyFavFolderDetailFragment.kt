@@ -5,6 +5,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import blbl.cat3399.core.account.BiliSession
+import blbl.cat3399.core.ui.GridLoadState
+import blbl.cat3399.core.ui.GridFocusBookmark
+import blbl.cat3399.ui.MainNavigationHost
+import kotlinx.coroutines.Job
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -13,7 +18,6 @@ import blbl.cat3399.core.api.BiliApi
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.R
 import blbl.cat3399.core.net.BiliClient
-import blbl.cat3399.core.ui.AppToast
 import blbl.cat3399.core.ui.BackButtonSizingHelper
 import blbl.cat3399.core.ui.DpadGridController
 import blbl.cat3399.core.ui.GridViewportFillMonitor
@@ -39,9 +43,16 @@ import blbl.cat3399.ui.RefreshKeyHandler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
-class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
+class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler, blbl.cat3399.core.ui.TabContentSwitchFocusHost {
     private var _binding: FragmentMyFavFolderDetailBinding? = null
     private val binding get() = _binding!!
+    private val gridBinding get() = binding.gridContent
+    private var gridLoadState: GridLoadState? = null
+    private var loadJob: Job? = null
+    private val focusBookmark = GridFocusBookmark()
+    private var lastRequestWasRefresh = true
+    private data class RefreshCheckpoint(val page: Int, val endReached: Boolean, val keys: Set<String>)
+    private var refreshCheckpoint: RefreshCheckpoint? = null
 
     private lateinit var adapter: VideoCardAdapter
     private var lastAppliedHeaderSizingScale: Float? = null
@@ -78,7 +89,7 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
                     onOpenDetail = { _, pos -> openDetail(pos) },
                     onOpenUp = { card -> openUpDetailFromVideoCard(card) },
                     onCardRemoved = { stableKey ->
-                        _binding?.recycler?.removeVideoCardAndRestoreFocus(
+                        _binding?.gridContent?.recycler?.removeVideoCardAndRestoreFocus(
                             adapter = adapter,
                             stableKey = stableKey,
                             isAlive = { _binding != null && isResumed },
@@ -101,12 +112,17 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
                     actionDelegate = actionController,
                 )
         }
-        binding.recycler.adapter = adapter
-        binding.recycler.setHasFixedSize(true)
-        binding.recycler.layoutManager = GridLayoutManager(requireContext(), spanCountForWidth(resources))
-        (binding.recycler.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
-        binding.recycler.clearOnScrollListeners()
-        binding.recycler.addOnScrollListener(
+        gridBinding.recycler.adapter = adapter
+        gridLoadState = GridLoadState(gridBinding, "收藏夹内暂无视频", activity as? MainNavigationHost, { _binding != null && isResumed }) {
+            gridLoadState?.loading()
+            if (lastRequestWasRefresh || adapter.itemCount == 0) resetAndLoad() else loadNextPage()
+        }
+        gridBinding.recycler.setHasFixedSize(true)
+        gridBinding.recycler.layoutManager = GridLayoutManager(requireContext(), spanCountForWidth(resources))
+        focusBookmark.attach(gridBinding.recycler, savedInstanceState)
+        (gridBinding.recycler.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
+        gridBinding.recycler.clearOnScrollListeners()
+        gridBinding.recycler.addOnScrollListener(
             object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     if (dy <= 0) return
@@ -122,7 +138,7 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
         dpadGridController?.release()
         dpadGridController =
             DpadGridController(
-                recyclerView = binding.recycler,
+                recyclerView = gridBinding.recycler,
                 callbacks =
                     object : DpadGridController.Callbacks {
                         override fun onTopEdge(): Boolean {
@@ -137,7 +153,7 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
 
                         override fun onRightEdge() = Unit
 
-                        override fun canLoadMore(): Boolean = !endReached
+                        override fun canLoadMore(): Boolean = gridLoadState?.hasFailure != true && !endReached
 
                         override fun loadMore() {
                             loadNextPage()
@@ -151,12 +167,12 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
             ).also { it.install() }
         viewportFillMonitor?.release()
         viewportFillMonitor =
-            binding.recycler.installGridViewportFillMonitor(
+            gridBinding.recycler.installGridViewportFillMonitor(
                 isEnabled = { _binding != null && isResumed },
-                canLoadMore = { !isLoadingMore && !endReached },
+                canLoadMore = { gridLoadState?.hasFailure != true && !isLoadingMore && !endReached },
                 loadMore = { loadNextPage() },
             )
-        binding.swipeRefresh.setOnRefreshListener {
+        gridBinding.swipeRefresh.setOnRefreshListener {
             pendingFocusFirstItem = true
             dpadGridController?.parkFocusForDataSetReset()
             resetAndLoad()
@@ -164,8 +180,8 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
 
         if (savedInstanceState == null) {
             pendingFocusFirstItem = true
-            binding.recycler.requestFocus()
-            binding.swipeRefresh.isRefreshing = true
+            gridBinding.recycler.requestFocus()
+            gridBinding.swipeRefresh.isRefreshing = true
             resetAndLoad()
         }
 
@@ -174,7 +190,7 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
     override fun onResume() {
         super.onResume()
         applyBackButtonSizing()
-        (binding.recycler.layoutManager as? GridLayoutManager)?.spanCount = spanCountForWidth(resources)
+        (gridBinding.recycler.layoutManager as? GridLayoutManager)?.spanCount = spanCountForWidth(resources)
         viewportFillMonitor?.scheduleCheck()
     }
 
@@ -202,15 +218,25 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
     override fun handleRefreshKey(): Boolean {
         val b = _binding ?: return false
         if (!isResumed) return false
-        if (b.swipeRefresh.isRefreshing) return true
-        b.swipeRefresh.isRefreshing = true
+        if (b.gridContent.swipeRefresh.isRefreshing) return true
+        b.gridContent.swipeRefresh.isRefreshing = true
         pendingFocusFirstItem = true
         dpadGridController?.parkFocusForDataSetReset()
         resetAndLoad()
         return true
     }
 
+    override fun requestFocusCurrentPagePrimaryItemFromContentSwitch(): Boolean {
+        if (_binding == null || !isResumed) return false
+        val recycler = gridBinding.recycler
+        if (adapter.itemCount == 0 && gridBinding.btnRetry.isShown) return gridBinding.btnRetry.requestFocus()
+        if (focusBookmark.requestFocus(recycler) { _binding != null && isResumed }) return true
+        return recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() ?: recycler.requestFocus()
+    }
+
     private fun resetAndLoad() {
+        loadJob?.cancel()
+        refreshCheckpoint = if (adapter.itemCount > 0) RefreshCheckpoint(page, endReached, loadedStableKeys.toSet()) else null
         pendingFocusFirstItem = true
         dpadGridController?.parkFocusForDataSetReset()
         loadedStableKeys.clear()
@@ -219,21 +245,25 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
         page = 1
         requestToken++
         dpadGridController?.clearPendingFocusAfterLoadMore()
-        adapter.submit(emptyList())
         loadNextPage(isRefresh = true)
     }
 
     private fun loadNextPage(isRefresh: Boolean = false) {
+        if (gridLoadState?.hasFailure == true && !isRefresh) return
         if (isLoadingMore || endReached) return
         val token = requestToken
         isLoadingMore = true
-        viewLifecycleOwner.lifecycleScope.launch {
+        val requestBinding = binding
+        val sessionRevision = BiliSession.state.value.revision
+        lastRequestWasRefresh = isRefresh
+        gridLoadState?.loading()
+        loadJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 var targetPage = page
                 var loadedPage: Pair<List<blbl.cat3399.core.model.VideoCard>, Boolean>? = null
                 while (loadedPage == null) {
                     val res = BiliApi.favFolderResources(mediaId = mediaId, pn = targetPage, ps = 20)
-                    if (token != requestToken) return@launch
+                    if (token != requestToken || _binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
                     val hasMore = res.hasMore
                     val visibleItems = VideoCardVisibilityFilter.filterVisibleFresh(res.items, loadedStableKeys)
                     targetPage++
@@ -242,20 +272,24 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
                     }
                 }
                 val (visibleItems, hasMore) = checkNotNull(loadedPage)
-                if (token != requestToken) return@launch
+                if (token != requestToken || _binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
+                if (isRefresh) refreshCheckpoint = null
                 visibleItems.forEach { loadedStableKeys.add(it.stableKey()) }
                 if (isRefresh) adapter.submit(visibleItems) else adapter.append(visibleItems)
                 maybeFocusFirstItem()
-                _binding?.recycler?.postIfAlive(isAlive = { _binding != null }) { dpadGridController?.consumePendingFocusAfterLoadMore() }
+                _binding?.gridContent?.recycler?.postIfAlive(isAlive = { _binding != null }) { dpadGridController?.consumePendingFocusAfterLoadMore() }
                 endReached = !hasMore
                 page = targetPage
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
+                if (token != requestToken || _binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
+                if (isRefresh) restoreRefreshCheckpoint()
+                pendingFocusFirstItem = false
                 AppLog.e("MyFavDetail", "load failed mediaId=$mediaId", t)
-                context?.let { AppToast.show(it, "加载失败，可查看 Logcat(标签 BLBL)") }
+                gridLoadState?.failure(t, sessionRevision)
             } finally {
-                if (token == requestToken) _binding?.swipeRefresh?.isRefreshing = false
-                isLoadingMore = false
+                if (token == requestToken) _binding?.gridContent?.swipeRefresh?.isRefreshing = false
+                if (token == requestToken) isLoadingMore = false
                 viewportFillMonitor?.scheduleCheck()
             }
         }
@@ -264,7 +298,7 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
     private fun maybeFocusFirstItem() {
         if (!pendingFocusFirstItem) return
         if (_binding == null) return
-        val recycler = binding.recycler
+        val recycler = gridBinding.recycler
         val isUiAlive = { _binding != null && isResumed }
         recycler.requestFocusFirstItemOrSelfAfterRefresh(
             itemCount = adapter.itemCount,
@@ -274,7 +308,29 @@ class MyFavFolderDetailFragment : Fragment(), RefreshKeyHandler {
         )
     }
 
+    private fun restoreRefreshCheckpoint() {
+        val previous = refreshCheckpoint ?: return
+        page = previous.page
+        endReached = previous.endReached
+        loadedStableKeys.clear()
+        loadedStableKeys.addAll(previous.keys)
+        refreshCheckpoint = null
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        _binding?.let { focusBookmark.save(it.gridContent.recycler, outState) }
+    }
+
     override fun onDestroyView() {
+        _binding?.let { focusBookmark.detach(it.gridContent.recycler) }
+        loadJob?.cancel()
+        loadJob = null
+        restoreRefreshCheckpoint()
+        requestToken++
+        isLoadingMore = false
+        gridLoadState?.release()
+        gridLoadState = null
         dpadGridController?.release()
         dpadGridController = null
         viewportFillMonitor?.release()

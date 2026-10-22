@@ -1,5 +1,7 @@
 package blbl.cat3399.feature.live
 
+import blbl.cat3399.core.ui.PageSectionFocusHost
+import blbl.cat3399.core.ui.bindDpadSectionNavigation
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -22,11 +24,11 @@ import blbl.cat3399.core.ui.requestFocusSelectedTab
 import blbl.cat3399.databinding.FragmentLiveBinding
 import blbl.cat3399.ui.BackPressHandler
 import blbl.cat3399.ui.RefreshKeyHandler
-import blbl.cat3399.ui.SidebarFocusHost
+import blbl.cat3399.ui.MainNavigationHost
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 
-class LiveFragment : Fragment(), LiveGridTabSwitchFocusHost, BackPressHandler, LiveNavigator {
+class LiveFragment : Fragment(), PageSectionFocusHost, LiveGridTabSwitchFocusHost, BackPressHandler, LiveNavigator {
     private var _binding: FragmentLiveBinding? = null
     private val binding get() = _binding!!
 
@@ -157,16 +159,10 @@ class LiveFragment : Fragment(), LiveGridTabSwitchFocusHost, BackPressHandler, L
                 val tab = tabs.getOrNull(position)
                 AppLog.d("Live", "tab focus pos=$position key=${tab?.key} title=${tab?.title} t=${SystemClock.uptimeMillis()}")
             }
-            val tabStrip = tabLayout.getChildAt(0) as? ViewGroup ?: return@postIfAlive
-            for (i in 0 until tabStrip.childCount) {
-                tabStrip.getChildAt(i).setOnKeyListener { _, keyCode, event ->
-                    if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                        focusCurrentPageFirstCardFromTab()
-                        return@setOnKeyListener true
-                    }
-                    false
-                }
-            }
+            tabLayout.bindDpadSectionNavigation(
+                onDown = { focusCurrentPageFirstCardFromTab() },
+                onUp = { (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true },
+            )
         }
 
         pageCallback?.let { binding.viewPager.unregisterOnPageChangeCallback(it) }
@@ -223,6 +219,8 @@ class LiveFragment : Fragment(), LiveGridTabSwitchFocusHost, BackPressHandler, L
         return true
     }
 
+    override fun requestFocusPageSection(): Boolean = if (_binding?.tabLayout?.isShown == true) focusSelectedTab() else false
+
     private fun focusSelectedTab(): Boolean {
         val b = _binding ?: return false
         return b.tabLayout.requestFocusSelectedTab(fallbackPosition = b.viewPager.currentItem) { _binding != null }
@@ -245,9 +243,9 @@ class LiveFragment : Fragment(), LiveGridTabSwitchFocusHost, BackPressHandler, L
         val b = _binding ?: return false
         val scheme = BiliClient.prefs.mainBackFocusScheme
 
-        // Tab strip is a navigation layer: Back should always return to the left sidebar.
+        // The page-local tab strip sits below the global top navigation.
         if (b.tabLayout.hasFocus()) {
-            return (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+            return (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
         }
 
         // Only handle the Back key when focus is inside the page content area.
@@ -267,11 +265,11 @@ class LiveFragment : Fragment(), LiveGridTabSwitchFocusHost, BackPressHandler, L
                     b.viewPager.setCurrentItem(0, false)
                     true
                 } else {
-                    (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+                    (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
                 }
             }
             AppPrefs.MAIN_BACK_FOCUS_SCHEME_C -> {
-                (activity as? SidebarFocusHost)?.requestFocusSidebarSelectedNav() == true
+                (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
             }
             else -> focusSelectedTab()
         }

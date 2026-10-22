@@ -240,7 +240,9 @@ object AppPopup {
         checked: BooleanArray,
         cancelable: Boolean = true,
         minCheckedCount: Int = 0,
+        showStatusText: Boolean = false,
         onChanged: (checked: BooleanArray) -> Unit,
+        onMinCheckedRejected: (() -> Unit)? = null,
         onDismiss: (() -> Unit)? = null,
     ): PopupHandle? {
         return runOnMainOrPost {
@@ -285,7 +287,9 @@ object AppPopup {
                     items = items,
                     checked = state,
                     minCheckedCount = minCheckedCount.coerceAtLeast(0),
+                    showStatusText = showStatusText,
                     onChanged = { onChanged(state.copyOf()) },
+                    onMinCheckedRejected = onMinCheckedRejected,
                 )
             recycler.adapter = adapter
 
@@ -604,7 +608,9 @@ object AppPopup {
         private val items: List<String>,
         private val checked: BooleanArray,
         private val minCheckedCount: Int,
+        private val showStatusText: Boolean,
         private val onChanged: (() -> Unit)?,
+        private val onMinCheckedRejected: (() -> Unit)?,
     ) : RecyclerView.Adapter<MultiChoiceAdapter.Vh>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Vh {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_popup_choice, parent, false)
@@ -616,11 +622,15 @@ object AppPopup {
             holder.bind(
                 label = label,
                 checked = checked.getOrNull(position) == true,
+                showStatusText = showStatusText,
                 position = position,
                 itemCount = items.size,
                 onToggle = {
                     if (position !in checked.indices) return@bind
-                    if (checked[position] && checked.count { it } <= minCheckedCount) return@bind
+                    if (checked[position] && checked.count { it } <= minCheckedCount) {
+                        onMinCheckedRejected?.invoke()
+                        return@bind
+                    }
                     checked[position] = !checked[position]
                     notifyItemChanged(position)
                     onChanged?.invoke()
@@ -636,9 +646,10 @@ object AppPopup {
             private val tvLabel: TextView = itemView.findViewById(R.id.tv_label)
             private val tvCheck: TextView = itemView.findViewById(R.id.tv_check)
 
-            fun bind(label: String, checked: Boolean, position: Int, itemCount: Int, onToggle: () -> Unit) {
+            fun bind(label: String, checked: Boolean, showStatusText: Boolean, position: Int, itemCount: Int, onToggle: () -> Unit) {
                 tvLabel.text = label
-                tvCheck.visibility = if (checked) View.VISIBLE else View.GONE
+                tvCheck.text = if (showStatusText) if (checked) "显示" else "隐藏" else "✓"
+                tvCheck.visibility = if (showStatusText || checked) View.VISIBLE else View.GONE
                 itemView.setOnClickListener { onToggle() }
                 itemView.setOnKeyListener { _, keyCode, event ->
                     when (keyCode) {

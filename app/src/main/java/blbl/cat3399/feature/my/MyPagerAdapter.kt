@@ -4,7 +4,7 @@ import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import blbl.cat3399.R
-import blbl.cat3399.core.prefs.AppPrefs
+import blbl.cat3399.core.navigation.MainNavigationKeys
 
 data class MyTabSpec(
     val key: String,
@@ -30,13 +30,19 @@ object MyTabs {
             MyTabSpec(KEY_LIKE, R.string.my_tab_like) { MyLikeFragment() },
         )
 
-    fun visibleTabs(prefs: AppPrefs): List<MyTabSpec> = filterVisible(all, prefs.mainMyVisibleTabs)
+    fun topNavigationKeyFor(tabKey: String): String? =
+        when (tabKey) {
+            KEY_HISTORY -> MainNavigationKeys.MY_HISTORY
+            KEY_FAV -> MainNavigationKeys.MY_FAVORITES
+            KEY_BANGUMI -> MainNavigationKeys.MY_BANGUMI
+            KEY_DRAMA -> MainNavigationKeys.MY_DRAMA
+            KEY_TOVIEW -> MainNavigationKeys.MY_WATCH_LATER
+            KEY_LIKE -> MainNavigationKeys.MY_LIKES
+            else -> null
+        }
 
-    private fun filterVisible(allTabs: List<MyTabSpec>, selectedKeys: List<String>): List<MyTabSpec> {
-        if (selectedKeys.isEmpty()) return allTabs
-        val selected = selectedKeys.toSet()
-        return allTabs.filter { it.key in selected }.ifEmpty { allTabs }
-    }
+    fun tabKeyFor(topNavigationKey: String): String? =
+        all.firstOrNull { topNavigationKeyFor(it.key) == topNavigationKey }?.key
 }
 
 class MyPagerAdapter(

@@ -1,7 +1,10 @@
 package blbl.cat3399.ui
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
@@ -10,9 +13,11 @@ import android.view.ViewGroup.MarginLayoutParams
 import android.view.ViewTreeObserver
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
-import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.Lifecycle
+import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,9 +27,12 @@ import androidx.recyclerview.widget.SimpleItemAnimator
 import blbl.cat3399.BuildConfig
 import blbl.cat3399.R
 import blbl.cat3399.core.account.AccountSessionStore
+import blbl.cat3399.core.account.BiliSession
 import blbl.cat3399.core.api.BiliApi
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.log.CrashTracker
+import blbl.cat3399.core.navigation.MainNavigationKeys
+import blbl.cat3399.core.ui.PageSectionFocusHost
 import blbl.cat3399.core.net.BiliClient
 import blbl.cat3399.core.prefs.AppPrefs
 import blbl.cat3399.core.tv.RemoteKeys
@@ -34,6 +42,7 @@ import blbl.cat3399.core.ui.FocusReturn
 import blbl.cat3399.core.ui.FocusTreeUtils
 import blbl.cat3399.core.ui.Immersive
 import blbl.cat3399.core.ui.TabContentSwitchFocusHost
+import blbl.cat3399.core.ui.ThemeColor
 import blbl.cat3399.core.ui.cloneInUserScale
 import blbl.cat3399.core.ui.dispatchToAncestorDpadItemKeyHandler
 import blbl.cat3399.core.ui.popup.AppPopup
@@ -43,10 +52,10 @@ import blbl.cat3399.core.update.ApkUpdater
 import blbl.cat3399.databinding.ActivityMainBinding
 import blbl.cat3399.databinding.DialogUserInfoBinding
 import blbl.cat3399.feature.following.FollowingListActivity
+import blbl.cat3399.feature.settings.SettingsActivity
 import blbl.cat3399.feature.login.QrLoginActivity
 import blbl.cat3399.feature.player.engine.IjkPlayerPlugin
 import blbl.cat3399.feature.player.engine.IjkPlayerPluginUi
-import blbl.cat3399.feature.settings.SettingsActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -54,17 +63,43 @@ import org.json.JSONObject
 import java.lang.ref.WeakReference
 import java.util.Locale
 
-class MainActivity : BaseActivity(), SidebarFocusHost {
+class MainActivity : BaseActivity(), MainNavigationHost {
+    private var focusRequestToken = 0
+    private var topNavigationFocusReady = false
+    private var suppressNextTopNavigationFocusFollow = false
+    private var renderedVisibleKeys: List<String>? = null
+    private var renderedSelectedKey: String? = null
+    private val navigationHandler = Handler(Looper.getMainLooper())
+    private var sidebarExpanded = false
+    private var sidebarAutoCollapse: Runnable? = null
+    private var sidebarBackdropJob: Job? = null
+    private var sidebarBackdropBitmap: Bitmap? = null
+    private var sidebarBackdropToken = 0
+    private var pendingPageSelectionKey: String? = null
+    private val pageFocusedViews = mutableMapOf<String, WeakReference<View>>()
+    private var pendingLoginTargetKey: String? = null
+    private var userRefreshJob: Job? = null
+    private var observedSessionRevision: Long? = null
+    private val qrLoginLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val target = pendingLoginTargetKey
+        pendingLoginTargetKey = null
+        if (result.resultCode == RESULT_OK && target != null) {
+            navigateTopKey(MainRootNavRegistry.normalizeVisibleTopNavKey(target))
+            binding.root.post { requestFocusTopNavigationSelected() }
+        }
+    }
     private enum class UserInfoOverlayMode {
         PROFILE,
         ACCOUNT_SWITCH,
     }
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var navAdapter: SidebarNavAdapter
-    private var needForceInitialSidebarFocus: Boolean = false
-    private var launchNavId: Int = SidebarNavAdapter.ID_HOME
+    private lateinit var navAdapter: MainTopNavAdapter
+    private var needForceInitialTopNavigationFocus: Boolean = false
+    private var launchNavId: Int = MainRootNavIds.HOME
+    private var launchTopNavKey: String = MainTopNavAdapter.KEY_RECOMMEND
     private var currentRootNavId: Int? = null
+    private var currentTopNavKey: String = MainTopNavAdapter.KEY_RECOMMEND
     private var lastMainFocusedView: WeakReference<View>? = null
     private var pausedFocusedView: WeakReference<View>? = null
     private var pausedFocusWasInMain: Boolean = false
@@ -82,9 +117,7 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
     private val userInfoReturnFocus = FocusReturn()
     private var userInfoLoadJob: Job? = null
     private var userInfoOverlayMode: UserInfoOverlayMode = UserInfoOverlayMode.PROFILE
-    private var isSidebarExpanded: Boolean = true
-    private var pendingSidebarCollapseAfterMainFocus: Boolean = false
-    private var pendingSidebarCollapseToken: Int = 0
+    private var restoreAccountFocusAfterQrLogin: Boolean = false
     private var lastBackAtMs: Long = 0L
     private var lastMainFocusAtMs: Long = 0L
 
@@ -103,58 +136,99 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val safeState = restoredState
-        needForceInitialSidebarFocus = safeState == null
+        needForceInitialTopNavigationFocus = safeState == null
         binding = ActivityMainBinding.inflate(layoutInflater.cloneInUserScale(this))
         setContentView(binding.root)
+        pendingLoginTargetKey = safeState?.getString(STATE_KEY_PENDING_LOGIN_TARGET)
         Immersive.apply(this, BiliClient.prefs.fullscreenEnabled)
-        setSidebarExpanded(expanded = true)
+        launchTopNavKey = MainRootNavRegistry.resolveLaunchTopNavKey(BiliClient.prefs.startupPage)
         launchNavId = resolveLaunchNavId()
 
         userInfoOverlay = binding.userInfoOverlay
         initUserInfoOverlay()
 
-        binding.btnSidebarLogin.setOnClickListener { openQrLogin() }
-        binding.ivSidebarUser.setOnClickListener {
-            if (!BiliClient.cookies.hasSessData()) {
-                openQrLogin()
-                return@setOnClickListener
-            }
-            showUserInfoOverlay()
-        }
-        binding.btnSidebarSettings.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+        val savedRootNavId = safeState?.getInt(STATE_KEY_ROOT_NAV_ID, -1)?.takeIf(::isValidRootNavId)
+        val savedTopKey = safeState?.getString(STATE_KEY_TOP_NAV_KEY)?.takeIf(MainRootNavRegistry::isValidTopNavKey)
+        val inferredTopKey = savedTopKey ?: savedRootNavId?.let { MainRootNavRegistry.topKeyForRootNavId(it) }
+        val initialSelectedTopKey =
+            if (safeState == null) launchTopNavKey else MainRootNavRegistry.normalizeVisibleTopNavKey(inferredTopKey)
+        val initialSelectedNavId = MainRootNavRegistry.rootNavIdForTopKey(initialSelectedTopKey) ?: MainRootNavIds.HOME
+        currentTopNavKey = initialSelectedTopKey
+        pendingPageSelectionKey = initialSelectedTopKey.takeIf { MainRootNavRegistry.myPageKeyForTopKey(it) != null || MainRootNavRegistry.homePageKeyForTopKey(it) != null }
 
-        val initialSelectedNavId =
-            if (safeState == null) {
-                launchNavId
-            } else {
-                safeState.getInt(STATE_KEY_ROOT_NAV_ID, -1).takeIf { isValidRootNavId(it) }
-                    ?: inferCurrentRootNavIdFromFragments()
-                    ?: launchNavId
-            }
-
-        navAdapter = SidebarNavAdapter(
+        navAdapter = MainTopNavAdapter(
             onClick = { item ->
-                AppLog.d("Nav", "sidebar click id=${item.id} title=${item.title} t=${SystemClock.uptimeMillis()}")
-                handleSidebarNavClick(item.id)
+                if (item.key == MainTopNavAdapter.KEY_SETTINGS) {
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                } else if (item.key == MainNavigationKeys.MY_ACCOUNT) {
+                    navigateTopKey(item.key)
+                    collapseSidebar()
+                    binding.mainContainer.post {
+                        if (currentTopNavKey == MainNavigationKeys.MY_ACCOUNT) {
+                            (currentRootFragment() as? blbl.cat3399.feature.my.MyAccountFragment)?.showOverview()
+                        }
+                        focusPageContent()
+                    }
+                } else {
+                    navigateTopKey(item.key, refreshIfReselected = true)
+                    collapseSidebar()
+                    binding.mainContainer.post { focusPageContent() }
+                }
+            },
+            onFocus = { item ->
+                navigateOnFocus(item.key)
             },
         )
-        binding.recyclerSidebar.layoutManager = LinearLayoutManager(this)
-        binding.recyclerSidebar.adapter = navAdapter
-        (binding.recyclerSidebar.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
-        navAdapter.submit(MainRootNavRegistry.sidebarItems(this), selectedId = initialSelectedNavId)
+        binding.recyclerTopNav.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
+        binding.recyclerTopNav.adapter = navAdapter
+        (binding.recyclerTopNav.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
+        binding.navScrim.setOnClickListener { collapseSidebar() }
+        configureTopNavigationItems(initialSelectedTopKey)
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                BiliSession.state.collect { session ->
+                    if (observedSessionRevision != null && session.revision != observedSessionRevision) {
+                        pageFocusedViews.clear()
+                        lastMainFocusedView = null
+                        userInfoLoadJob?.cancel()
+                        if (isUserInfoOverlayVisible()) {
+                            if (!session.canAccessPersonal) hideUserInfoOverlay()
+                            else if (userInfoOverlayMode == UserInfoOverlayMode.PROFILE) {
+                                resetUserInfoUi()
+                                loadUserInfo()
+                            }
+                        }
+                        binding.root.post {
+                            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && currentRootNavId !in setOf(MainRootNavIds.MY, MainRootNavIds.ACCOUNT)) {
+                                dispatchRefreshKeyToCurrentPage()
+                            }
+                        }
+                    }
+                    observedSessionRevision = session.revision
+                }
+            }
+        }
 
         if (safeState == null) {
-            navAdapter.select(initialSelectedNavId, trigger = true)
+            navigateTopKey(initialSelectedTopKey, refreshIfReselected = false)
         } else {
             restoreRootAfterRecreate(initialSelectedNavId)
+            if (MainRootNavRegistry.homePageKeyForTopKey(initialSelectedTopKey) != null) {
+                (currentRootFragment() as? blbl.cat3399.feature.home.HomeFragment)?.selectPage(
+                    MainRootNavRegistry.homePageKeyForTopKey(initialSelectedTopKey)!!,
+                )
+            } else if (MainRootNavRegistry.myPageKeyForTopKey(initialSelectedTopKey) != null) {
+                (currentRootFragment() as? blbl.cat3399.feature.my.MyFragment)?.selectTopNavigationKey(initialSelectedTopKey)
+            }
         }
 
         focusListener =
             ViewTreeObserver.OnGlobalFocusChangeListener { _, newFocus ->
                 if (newFocus != null && isInMainContainer(newFocus)) {
+                    pageFocusedViews[currentTopNavKey] = WeakReference(newFocus)
                     lastMainFocusedView = WeakReference(newFocus)
                     lastMainFocusAtMs = SystemClock.uptimeMillis()
-                    maybeCollapseSidebarAfterMainFocusTransfer(newFocus)
                 }
             }.also { binding.root.viewTreeObserver.addOnGlobalFocusChangeListener(it) }
 
@@ -169,11 +243,17 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
                     if (supportFragmentManager.popBackStackImmediate()) {
                         return
                     }
-                    // Sidebar is the primary navigation layer on TV.
-                    // When focus is already in sidebar, Back should enter the app-level exit flow
+                    // The top navigation is the primary navigation layer on TV.
+                    // When focus is already there, Back should enter the app-level exit flow
                     // (double press to exit) instead of jumping back to the startup page.
                     val focused = currentFocus
-                    if (focused != null && isInSidebar(focused)) {
+                    val accountPage = currentRootFragment() as? blbl.cat3399.feature.my.MyAccountFragment
+                    if (accountPage?.handleBackPressed() == true) return
+                    if (sidebarExpanded) {
+                        collapseSidebar()
+                        return
+                    }
+                    if (focused != null && isInTopNavigation(focused)) {
                         if (shouldFinishOnBackPress()) finish()
                         return
                     }
@@ -182,7 +262,7 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
                     AppLog.d("Back", "back current=${current?.javaClass?.simpleName} handled=$handled")
                     if (handled) return
                     if (!isAtLaunchRoot(current)) {
-                        navAdapter.select(launchNavId, trigger = true)
+                        navigateTopKey(launchTopNavKey)
                         return
                     }
                     if (shouldFinishOnBackPress()) finish()
@@ -190,31 +270,39 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
             },
         )
 
-        refreshSidebarUser()
         showFirstLaunchDisclaimerIfNeeded()
         maybeStartAutoUpdateCheck()
     }
 
     private fun resolveLaunchNavId(): Int {
-        return MainRootNavRegistry.resolveLaunchNavId(BiliClient.prefs.startupPage)
+        return MainRootNavRegistry.rootNavIdForTopKey(launchTopNavKey) ?: MainRootNavIds.HOME
     }
 
     private fun isAtLaunchRoot(fragment: Fragment?): Boolean {
-        return navIdForRootFragment(fragment) == launchNavId
+        return navIdForRootFragment(fragment) == launchNavId && currentTopNavKey == launchTopNavKey
     }
 
     override fun onResume() {
         super.onResume()
-        syncSidebarNavState()
-        syncSidebarExpansionWithPrefs()
+        syncTopNavigationState()
         restoreFocusAfterResume()
-        forceInitialSidebarFocusIfNeeded()
+        forceInitialTopNavigationFocusIfNeeded()
         ensureInitialFocus()
-        refreshSidebarUser()
+        if (sidebarExpanded) scheduleSidebarAutoCollapse()
+        refreshSession()
         if (isUserInfoOverlayVisible()) {
             if (userInfoOverlayMode == UserInfoOverlayMode.ACCOUNT_SWITCH) {
                 showAccountSwitchPanel(requestFocus = false)
+                if (restoreAccountFocusAfterQrLogin) {
+                    restoreAccountFocusAfterQrLogin = false
+                    userInfoOverlay.root.post {
+                        if (isUserInfoOverlayVisible() && userInfoOverlayMode == UserInfoOverlayMode.ACCOUNT_SWITCH) {
+                            requestUserInfoFocus(userInfoOverlay.btnAddAccount)
+                        }
+                    }
+                }
             } else {
+                restoreAccountFocusAfterQrLogin = false
                 loadUserInfo()
             }
         }
@@ -224,10 +312,10 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
     }
 
     override fun onPause() {
+        cancelSidebarAutoCollapse()
         val focused = currentFocus
         pausedFocusedView = focused?.let { WeakReference(it) }
         pausedFocusWasInMain = focused != null && isInMainContainer(focused)
-        clearPendingSidebarCollapseAfterMainFocus()
         releaseDpadDownFocusGuard()
         super.onPause()
     }
@@ -235,9 +323,20 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         currentRootNavId?.let { outState.putInt(STATE_KEY_ROOT_NAV_ID, it) }
+        outState.putString(STATE_KEY_TOP_NAV_KEY, currentTopNavKey)
+        outState.putString(STATE_KEY_PENDING_LOGIN_TARGET, pendingLoginTargetKey)
     }
 
     override fun onDestroy() {
+        cancelSidebarAutoCollapse()
+        sidebarBackdropToken++
+        sidebarBackdropJob?.cancel()
+        sidebarBackdropJob = null
+        binding.sidebarBackdrop.setImageDrawable(null)
+        sidebarBackdropBitmap?.recycle()
+        sidebarBackdropBitmap = null
+        binding.navigationPanel.animate().cancel()
+        binding.btnCollapsedNavigation.root.animate().cancel()
         focusListener?.let { binding.root.viewTreeObserver.removeOnGlobalFocusChangeListener(it) }
         focusListener = null
         super.onDestroy()
@@ -245,49 +344,209 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) Immersive.apply(this, BiliClient.prefs.fullscreenEnabled)
+        if (hasFocus) {
+            Immersive.apply(this, BiliClient.prefs.fullscreenEnabled)
+            if (sidebarExpanded) scheduleSidebarAutoCollapse()
+        } else {
+            cancelSidebarAutoCollapse()
+        }
     }
+
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN && sidebarExpanded) {
+            scheduleSidebarAutoCollapse()
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
+    private fun expandSidebar(focusSelected: Boolean): Boolean {
+        cancelSidebarAutoCollapse()
+        if (!sidebarExpanded) {
+            sidebarExpanded = true
+            binding.navScrim.visibility = View.VISIBLE
+            binding.navScrim.isClickable = true
+            binding.navigationPanel.visibility = View.VISIBLE
+            binding.btnCollapsedNavigation.root.visibility = View.GONE
+            binding.navigationPanel.alpha = 0f
+            binding.navigationPanel.translationX = -dp(8f).toFloat()
+            binding.navigationPanel.animate().cancel()
+            binding.navigationPanel.animate()
+                .alpha(1f)
+                .translationX(0f)
+                .setDuration(180L)
+                .withEndAction {
+                    if (sidebarExpanded) updateSidebarBackdrop()
+                }
+                .start()
+        } else if (sidebarBackdropBitmap == null && sidebarBackdropJob == null) {
+            updateSidebarBackdrop()
+        }
+        if (focusSelected) focusTopNavigationKey(MainRootNavRegistry.normalizeVisibleTopNavKey(currentTopNavKey))
+        scheduleSidebarAutoCollapse()
+        return true
+    }
+
+    private fun updateSidebarBackdrop() {
+        if (!sidebarExpanded) return
+        val image = binding.sidebarBackdrop
+        image.visibility = View.VISIBLE
+        image.post {
+            if (isDestroyed || !sidebarExpanded) return@post
+            val sample = SidebarBackdropBlur.capture(binding.mainContainer, image) ?: return@post
+            val token = ++sidebarBackdropToken
+            sidebarBackdropJob?.cancel()
+            sidebarBackdropJob = lifecycleScope.launch {
+                var blurred: Bitmap? = null
+                try {
+                    blurred = SidebarBackdropBlur.blur(sample)
+                    if (token != sidebarBackdropToken || !sidebarExpanded) return@launch
+
+                    val previous = sidebarBackdropBitmap
+                    sidebarBackdropBitmap = blurred
+                    image.setImageBitmap(blurred)
+                    blurred = null
+                    if (previous != null && previous !== sidebarBackdropBitmap) previous.recycle()
+                } finally {
+                    sample.recycle()
+                    blurred?.recycle()
+                }
+            }
+        }
+    }
+
+    private fun updateSidebarBackdropAfterPageChange() {
+        if (!sidebarExpanded) return
+        binding.mainContainer.doOnPreDraw {
+            if (sidebarExpanded) updateSidebarBackdrop()
+        }
+    }
+
+    private fun collapseSidebar(restoreMainFocus: Boolean = false): Boolean {
+        if (!sidebarExpanded) return false
+        val menuHadFocus = currentFocus?.let(::isInExpandedSidebar) == true
+        sidebarExpanded = false
+        sidebarBackdropToken++
+        sidebarBackdropJob?.cancel()
+        sidebarBackdropJob = null
+        cancelSidebarAutoCollapse()
+        binding.navScrim.visibility = View.GONE
+        binding.navScrim.isClickable = false
+        binding.btnCollapsedNavigation.root.visibility = View.VISIBLE
+        binding.btnCollapsedNavigation.root.bringToFront()
+        binding.btnCollapsedNavigation.root.elevation = dp(8f).toFloat()
+        binding.btnCollapsedNavigation.root.alpha = 0f
+        binding.btnCollapsedNavigation.root.animate().cancel()
+        binding.btnCollapsedNavigation.root.animate().alpha(1f).setDuration(180L).start()
+        binding.navigationPanel.animate().cancel()
+        binding.navigationPanel.visibility = View.GONE
+        binding.navigationPanel.alpha = 1f
+        binding.navigationPanel.translationX = 0f
+        if (restoreMainFocus) {
+            focusPageContent()
+        } else if (menuHadFocus) {
+            binding.btnCollapsedNavigation.root.post {
+                if (!sidebarExpanded && binding.btnCollapsedNavigation.root.isShown) binding.btnCollapsedNavigation.root.requestFocus()
+            }
+        }
+        return true
+    }
+
+    private fun scheduleSidebarAutoCollapse() {
+        cancelSidebarAutoCollapse()
+        if (!sidebarExpanded || isUserInfoOverlayVisible()) return
+        val task = Runnable {
+            sidebarAutoCollapse = null
+            collapseSidebar()
+        }
+        sidebarAutoCollapse = task
+        navigationHandler.postDelayed(task, 4_000L)
+    }
+
+    private fun cancelSidebarAutoCollapse() {
+        sidebarAutoCollapse?.let(navigationHandler::removeCallbacks)
+        sidebarAutoCollapse = null
+    }
+
+    private fun moveSidebarFocus(focused: View, direction: Int): Boolean {
+        val holder = binding.recyclerTopNav.findContainingViewHolder(focused) ?: return true
+        val count = navAdapter.itemCount
+        if (count == 0) return true
+        val target = (holder.bindingAdapterPosition + direction).coerceIn(0, count - 1)
+        val key = navAdapter.itemAt(target)?.key ?: return true
+        focusTopNavigationKey(key)
+        return true
+    }
+
 
     private fun shouldStartDpadDownFocusGuard(focused: View?): Boolean {
         if (isUserInfoOverlayVisible()) return false
         if (focused != null) {
-            if (isInSidebar(focused)) return false
+            if (isInTopNavigation(focused)) return false
             return isInMainContainer(focused)
         }
         val now = SystemClock.uptimeMillis()
         return now - lastMainFocusAtMs <= 1_000L
     }
 
-    private fun syncSidebarNavState() {
+    private fun syncTopNavigationState() {
+        launchTopNavKey = MainRootNavRegistry.resolveLaunchTopNavKey(BiliClient.prefs.startupPage)
         launchNavId = resolveLaunchNavId()
-        val currentValidNavId =
-            (currentRootNavId?.takeIf { isValidRootNavId(it) }
-                ?: inferCurrentRootNavIdFromFragments()?.takeIf { isValidRootNavId(it) })
-        val desiredNavId =
-            currentValidNavId
-                ?: launchNavId.takeIf { isValidRootNavId(it) }
-                ?: SidebarNavAdapter.ID_HOME
 
-        val sidebarItems = MainRootNavRegistry.sidebarItems(this)
-        if (!navAdapter.matches(sidebarItems, selectedId = desiredNavId)) {
-            navAdapter.submit(sidebarItems, selectedId = desiredNavId)
-        }
+        val currentNavId = currentRootNavId?.takeIf { isValidRootNavId(it) }
+            ?: inferCurrentRootNavIdFromFragments()?.takeIf { isValidRootNavId(it) }
+        val root = currentRootFragment()
+        val candidateKey =
+            when (currentNavId) {
+                MainRootNavIds.HOME -> (root as? blbl.cat3399.feature.home.HomeFragment)?.currentPageKey ?: currentTopNavKey
+                MainRootNavIds.ACCOUNT -> MainNavigationKeys.MY_ACCOUNT
+                MainRootNavIds.CATEGORY -> MainTopNavAdapter.KEY_CATEGORY
+                MainRootNavIds.LIVE -> MainTopNavAdapter.KEY_LIVE
+                MainRootNavIds.SEARCH -> MainTopNavAdapter.KEY_SEARCH
+                MainRootNavIds.MY -> currentTopNavKey.takeIf { MainRootNavRegistry.myPageKeyForTopKey(it) != null }
+                    ?: (root as? blbl.cat3399.feature.my.MyFragment)?.requestedTopNavigationKey()
+                    ?: MainTopNavAdapter.KEY_MY_HISTORY
+                else -> currentTopNavKey
+            }
+        val selectedKey = MainRootNavRegistry.normalizeVisibleTopNavKey(pendingPageSelectionKey ?: candidateKey)
+        pendingPageSelectionKey = selectedKey.takeIf { MainRootNavRegistry.myPageKeyForTopKey(it) != null || MainRootNavRegistry.homePageKeyForTopKey(it) != null }
+        val desiredNavId = MainRootNavRegistry.rootNavIdForTopKey(selectedKey) ?: launchNavId
+        if (currentNavId != desiredNavId) switchRoot(desiredNavId, clearBackStack = true)
+        currentTopNavKey = selectedKey
+        configureTopNavigationItems(selectedKey)
 
-        if (currentValidNavId != null) {
-            currentRootNavId = currentValidNavId
-            return
-        }
-        switchRoot(desiredNavId, clearBackStack = true)
+        applySelectedPageToRoot(selectedKey, desiredNavId)
+        binding.mainContainer.post { applySelectedPageToRoot(selectedKey, desiredNavId) }
     }
 
-    private fun syncSidebarExpansionWithPrefs() {
-        if (BiliClient.prefs.mainAutoHideSidebarOnEnterContent) {
-            if (currentFocus?.let(::isInSidebar) == true) {
-                setSidebarExpanded(expanded = true)
-            }
+    private fun applySelectedPageToRoot(key: String, expectedRootId: Int) {
+        if (currentRootNavId != expectedRootId || currentTopNavKey != key) return
+        MainRootNavRegistry.homePageKeyForTopKey(key)?.let { pageKey ->
+            (currentRootFragment() as? blbl.cat3399.feature.home.HomeFragment)?.selectPage(pageKey)
             return
         }
-        setSidebarExpanded(expanded = true)
+        if (MainRootNavRegistry.myPageKeyForTopKey(key) != null) {
+            (currentRootFragment() as? blbl.cat3399.feature.my.MyFragment)?.selectTopNavigationKey(key)
+        }
+    }
+
+    private fun configureTopNavigationItems(selectedKey: String) {
+        val visibleKeys = BiliClient.prefs.topNavigationVisibleKeys
+        val visibilityChanged = renderedVisibleKeys != visibleKeys
+        val items = MainRootNavRegistry.topNavItems(this, visibleKeys)
+        if (visibilityChanged) {
+            navAdapter.submit(items, selectedKey)
+            renderedVisibleKeys = visibleKeys
+        } else {
+            navAdapter.setSelectedKey(selectedKey)
+        }
+        if (visibilityChanged || renderedSelectedKey != selectedKey) {
+            val selectedItem = items.firstOrNull { it.key == selectedKey }
+                ?: MainRootNavRegistry.allTopNavItems(this).firstOrNull { it.key == selectedKey }
+                ?: MainRootNavRegistry.accountItem
+            MainTopNavAdapter.bindCard(binding.btnCollapsedNavigation, selectedItem, true,
+                onClick = { expandSidebar(focusSelected = true) }, onFocus = {})
+            renderedSelectedKey = selectedKey
+        }
     }
 
     private fun snapshotAndBlockFocus(container: ViewGroup) {
@@ -309,9 +568,8 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
         dpadDownFocusGuardActive = true
         dpadDownFocusGuardReleaseToken++
 
-        // Always block the left sidebar: it should only be entered explicitly (DPAD_LEFT),
-        // never as a framework fallback when content is temporarily detached/rebound.
-        snapshotAndBlockFocus(binding.sidebar)
+        // Keep framework fallback from escaping into the top navigation while content is loading.
+        snapshotAndBlockFocus(binding.topNavigation)
 
         val rootView = currentRootFragment()?.view
         val tabLayout = rootView?.findViewById<ViewGroup?>(R.id.tab_layout)
@@ -355,6 +613,11 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
             return super.dispatchKeyEvent(event)
         }
 
+        if (event.action == KeyEvent.ACTION_DOWN && isNavKey(event.keyCode)) {
+            suppressNextTopNavigationFocusFollow = false
+            if (sidebarExpanded) scheduleSidebarAutoCollapse()
+        }
+
         if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> beginOrKeepDpadDownFocusGuard(currentFocus)
@@ -362,8 +625,7 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
                 -> scheduleReleaseDpadDownFocusGuard()
             }
         } else if (event.action == KeyEvent.ACTION_DOWN && dpadDownFocusGuardActive) {
-            // The user pressed another key: stop guarding so normal navigation (e.g. DPAD_LEFT into
-            // sidebar, DPAD_LEFT into Dynamic follow list) is not blocked.
+            // The user pressed another key: stop guarding so normal content navigation is not blocked.
             releaseDpadDownFocusGuard()
         }
 
@@ -373,10 +635,16 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
             }
 
             val focused = currentFocus
+            if (sidebarExpanded && isNavKey(event.keyCode) && focused?.let(::isInExpandedSidebar) != true) {
+                // A touch-opened sidebar can be visible before RecyclerView children accept focus.
+                // Keep D-pad input on the overlay instead of letting it reach covered page content.
+                focusTopNavigationKey(MainRootNavRegistry.normalizeVisibleTopNavKey(currentTopNavKey))
+                return true
+            }
+
             if (focused == null && isNavKey(event.keyCode)) {
-                // During adapter updates, focus can be temporarily lost. If we were in main very
-                // recently, keep the event consumed (and keep focus-escape guards active) instead
-                // of forcing focus back into sidebar.
+                // During adapter updates, focus can be temporarily lost. Keep the event consumed
+                // when content had focus recently instead of moving to an unrelated target.
                 val now = SystemClock.uptimeMillis()
                 if (now - lastMainFocusAtMs <= 1_000L) {
                     return true
@@ -386,6 +654,24 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
                 return true
             }
 
+            if (focused != null && isInTopNavigation(focused)) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> return if (isInExpandedSidebar(focused)) collapseSidebar(restoreMainFocus = true) else expandSidebar(true)
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> return if (isInExpandedSidebar(focused)) collapseSidebar(restoreMainFocus = true) else focusMainFromTopNavigation()
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        if (!isInExpandedSidebar(focused)) return focusMainFromTopNavigation()
+                        return moveSidebarFocus(focused, 1)
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        if (!isInExpandedSidebar(focused)) return expandSidebar(true)
+                        return moveSidebarFocus(focused, -1)
+                    }
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    -> if (!isInExpandedSidebar(focused)) return expandSidebar(true)
+                }
+            }
+
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
                     if (focused != null && isInMainContainer(focused)) {
@@ -393,33 +679,19 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
                         if (focused.dispatchToAncestorDpadItemKeyHandler(event.keyCode, event)) {
                             return true
                         }
-                        // If the current view can move LEFT within the main container (e.g. SearchFragment
-                        // history/hot lists), don't steal the key event to enter the sidebar.
+                        // Preserve page-local horizontal movement (search history, following, and grids).
                         val next = focused.focusSearch(View.FOCUS_LEFT)
                         if (next != null && isInMainContainer(next)) {
                             return super.dispatchKeyEvent(event)
                         }
-                        if (canEnterSidebarFrom(focused)) {
-                            releaseDpadDownFocusGuard()
-                            focusSidebarSelectedNav()
-                            return true
-                        }
+                        if (expandSidebar(focusSelected = true)) return true
                     }
                 }
 
-                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (focused != null && isInSidebar(focused)) {
-                        focusMainFromSidebar()
-                        return true
-                    }
-                }
-
-                KeyEvent.KEYCODE_DPAD_UP,
-                KeyEvent.KEYCODE_DPAD_DOWN,
-                -> {
-                    if (focused != null && isInSidebar(focused)) {
-                        val moved = moveSidebarFocus(up = event.keyCode == KeyEvent.KEYCODE_DPAD_UP)
-                        if (moved) return true
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (focused != null && isInMainContainer(focused) && !hasPageSectionAbove(focused) && canEnterTopNavigationFrom(focused)) {
+                        releaseDpadDownFocusGuard()
+                        if (expandSidebar(focusSelected = true)) return true
                     }
                 }
             }
@@ -495,19 +767,24 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
 
     private fun showUserInfoOverlay() {
         if (isUserInfoOverlayVisible()) return
-        setSidebarExpanded(expanded = true)
+        cancelSidebarAutoCollapse()
         userInfoReturnFocus.capture(currentFocus)
         clampUserInfoOverlayCardWidth()
 
-        binding.sidebar.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        binding.topNavigation.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         binding.mainContainer.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
 
         userInfoOverlay.root.visibility = View.VISIBLE
         showProfilePanel(requestFocus = false)
 
         userInfoOverlay.root.post {
-            userInfoOverlay.btnFollowing.requestFocus()
+            requestUserInfoFocus(userInfoOverlay.btnFollowing)
         }
+    }
+
+    private fun requestUserInfoFocus(view: View): Boolean {
+        if (!view.isShown || !view.isFocusable) return false
+        return view.requestFocusFromTouch() || view.requestFocus()
     }
 
     private fun showProfilePanel(requestFocus: Boolean = true) {
@@ -521,7 +798,7 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
         resetUserInfoUi()
         loadUserInfo()
         if (requestFocus) {
-            userInfoOverlay.btnFollowing.post { userInfoOverlay.btnFollowing.requestFocus() }
+            userInfoOverlay.btnFollowing.post { requestUserInfoFocus(userInfoOverlay.btnFollowing) }
         }
     }
 
@@ -543,7 +820,7 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
         renderAccountSwitchRows()
         if (requestFocus) {
             val first = userInfoOverlay.accountList.getChildAt(0) ?: userInfoOverlay.btnAddAccount
-            first.post { first.requestFocus() }
+            first.post { requestUserInfoFocus(first) }
         }
     }
 
@@ -587,8 +864,8 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
                 return@setOnClickListener
             }
             AppToast.show(this, "已切换：${switched.name}")
-            syncSidebarNavState()
-            refreshSidebarUser()
+            syncTopNavigationState()
+            refreshSession()
             showProfilePanel()
         }
         return row
@@ -606,10 +883,11 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
         userInfoOverlayMode = UserInfoOverlayMode.PROFILE
         userInfoOverlay.root.visibility = View.GONE
 
-        binding.sidebar.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+        binding.topNavigation.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
         binding.mainContainer.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
 
         userInfoReturnFocus.restoreAndClear(postOnFail = true)
+        if (sidebarExpanded) scheduleSidebarAutoCollapse()
     }
 
     private fun resetUserInfoUi() {
@@ -629,8 +907,9 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
         userInfoOverlay.pbLoading.visibility = View.VISIBLE
         userInfoLoadJob =
             lifecycleScope.launch {
+                val sessionRevision = BiliSession.state.value.revision
                 runCatching {
-                    val nav = BiliApi.nav()
+                    val nav = BiliSession.profileNav()
                     val data = nav.optJSONObject("data")
                     val isLogin = data?.optBoolean("isLogin") ?: false
                     if (!isLogin) {
@@ -656,6 +935,7 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
                     val nextExp = parseInt(levelInfo, "next_exp")
 
                     val stat = if (mid > 0) BiliApi.relationStat(mid) else null
+                    if (sessionRevision != BiliSession.state.value.revision) return@launch
 
                     userInfoOverlay.tvName.text = name
                     userInfoOverlay.tvMid.text = getString(R.string.label_uid_fmt, mid.toString())
@@ -678,10 +958,12 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
                         userInfoOverlay.progressExp.visibility = View.GONE
                     }
                 }.onFailure {
-                    AppLog.w("MainActivity", "loadUserInfo failed", it)
+                    if (it is CancellationException) throw it
+                    if (sessionRevision != BiliSession.state.value.revision) return@launch
+                    AppLog.w("MainActivity", "loadUserInfo unavailable: ${it.javaClass.simpleName}")
                     if (!isUserInfoOverlayVisible()) return@launch
                     userInfoOverlay.tvName.text = "加载失败"
-                    userInfoOverlay.tvMid.text = it.message.orEmpty()
+                    userInfoOverlay.tvMid.text = "网络暂时不可用，请稍后重试"
                 }
                 userInfoOverlay.pbLoading.visibility = View.GONE
             }
@@ -708,8 +990,8 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
                     )
                 AppToast.show(this, next?.let { "已退出当前帐号，已切换：${it.name}" } ?: "已退出登录")
                 hideUserInfoOverlay()
-                syncSidebarNavState()
-                refreshSidebarUser()
+                syncTopNavigationState()
+                refreshSession()
             },
         )
     }
@@ -737,15 +1019,77 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
         }
     }
 
-    private fun handleSidebarNavClick(navId: Int): Boolean {
-        if (!isValidRootNavId(navId)) return false
-        val current = currentRootNavId
-        if (current != null && current == navId) {
-            // Reselect: force refresh the current (visible) tab content.
-            dispatchRefreshKeyToCurrentPage()
+    private fun navigateOnFocus(key: String) {
+        // Settings is a sidebar tool, not a destination; focus alone must not open it or alter the page.
+        if (key == MainTopNavAdapter.KEY_SETTINGS) return
+        if (suppressNextTopNavigationFocusFollow && key != currentTopNavKey) {
+            suppressNextTopNavigationFocusFollow = false
+            requestFocusTopNavigationSelected()
+            return
+        }
+        if (topNavigationFocusReady && BiliClient.prefs.tabSwitchFollowsFocus && key != currentTopNavKey) {
+            navigateTopKey(key, refreshIfReselected = false)
+        }
+    }
+
+    override fun suppressNextTopNavigationFocusFollow() {
+        suppressNextTopNavigationFocusFollow = true
+    }
+
+    private fun navigateTopKey(key: String, refreshIfReselected: Boolean = false): Boolean {
+        if (MainRootNavRegistry.normalizeVisibleTopNavKey(key) != key) return false
+        val targetNavId = MainRootNavRegistry.rootNavIdForTopKey(key) ?: return false
+        if (!isValidRootNavId(targetNavId)) return false
+        val startedAt = SystemClock.uptimeMillis()
+        val wasSamePage = currentRootNavId == targetNavId && currentTopNavKey == key
+        if (wasSamePage) {
+            if (refreshIfReselected) dispatchRefreshKeyToCurrentPage()
             return true
         }
-        return switchRoot(navId, clearBackStack = true)
+        currentFocus?.takeIf(::isInMainContainer)?.let { pageFocusedViews[currentTopNavKey] = WeakReference(it) }
+        currentTopNavKey = key
+        pendingPageSelectionKey = key.takeIf { MainRootNavRegistry.myPageKeyForTopKey(it) != null || MainRootNavRegistry.homePageKeyForTopKey(it) != null }
+        BiliClient.prefs.lastVisitedTopNavigationKey = key
+        configureTopNavigationItems(key)
+        if (currentRootNavId != targetNavId && !switchRoot(targetNavId, clearBackStack = true)) return false
+        applySelectedPageToRoot(key, targetNavId)
+        binding.mainContainer.post {
+            applySelectedPageToRoot(key, targetNavId)
+            updateSidebarBackdropAfterPageChange()
+        }
+        AppLog.d("Nav", "selected key=$key dispatchMs=${SystemClock.uptimeMillis() - startedAt}")
+        return true
+    }
+
+    override fun onHomePageSelected(pageKey: String) {
+        val topKey = MainRootNavRegistry.topKeyForRootNavId(MainRootNavIds.HOME, pageKey)
+        if (currentRootNavId != MainRootNavIds.HOME || !MainRootNavRegistry.isValidTopNavKey(topKey)) return
+        if (pendingPageSelectionKey != null && pendingPageSelectionKey != topKey) return
+        pendingPageSelectionKey = null
+        if (topKey !in BiliClient.prefs.topNavigationVisibleKeys) {
+            navigateTopKey(MainRootNavRegistry.normalizeVisibleTopNavKey(topKey), refreshIfReselected = false)
+            return
+        }
+        currentTopNavKey = topKey
+        BiliClient.prefs.lastVisitedTopNavigationKey = topKey
+        navAdapter.setSelectedKey(topKey)
+        configureTopNavigationItems(topKey)
+        updateSidebarBackdropAfterPageChange()
+    }
+
+    override fun onMyPageSelected(topNavigationKey: String) {
+        if (currentRootNavId != MainRootNavIds.MY || !topNavigationKey.startsWith("my_")) return
+        if (pendingPageSelectionKey != null && pendingPageSelectionKey != topNavigationKey) return
+        pendingPageSelectionKey = null
+        if (topNavigationKey !in BiliClient.prefs.topNavigationVisibleKeys) {
+            navigateTopKey(MainRootNavRegistry.normalizeVisibleTopNavKey(topNavigationKey), refreshIfReselected = false)
+            return
+        }
+        currentTopNavKey = topNavigationKey
+        BiliClient.prefs.lastVisitedTopNavigationKey = topNavigationKey
+        navAdapter.setSelectedKey(topNavigationKey)
+        configureTopNavigationItems(topNavigationKey)
+        updateSidebarBackdropAfterPageChange()
     }
 
     private fun restoreRootAfterRecreate(initialSelectedNavId: Int) {
@@ -851,12 +1195,19 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
     }
 
     private fun isValidRootNavId(id: Int): Boolean {
-        return MainRootNavRegistry.enabledSpecForNavId(id) != null
+        return MainRootNavRegistry.isAccessibleRootNavId(id)
     }
 
     private fun openQrLogin() {
         AppLog.i("MainActivity", "openQrLogin")
-        startActivity(Intent(this, QrLoginActivity::class.java))
+        restoreAccountFocusAfterQrLogin =
+            isUserInfoOverlayVisible() && userInfoOverlayMode == UserInfoOverlayMode.ACCOUNT_SWITCH
+        qrLoginLauncher.launch(Intent(this, QrLoginActivity::class.java))
+    }
+
+    override fun openLoginForCurrentPage() {
+        pendingLoginTargetKey = currentTopNavKey
+        openQrLogin()
     }
 
     private fun shouldFinishOnBackPress(): Boolean {
@@ -1015,76 +1366,37 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
             }
     }
 
-    private fun refreshSidebarUser() {
-        val hasCookie = BiliClient.cookies.hasSessData()
-        if (!hasCookie) {
-            showLoggedOut()
-            return
-        }
-        lifecycleScope.launch {
-            runCatching {
-                val nav = BiliApi.nav()
-                val data = nav.optJSONObject("data")
-                val isLogin = data?.optBoolean("isLogin") ?: false
-                val avatarUrl = data?.optString("face")?.takeIf { it.isNotBlank() }
-                if (isLogin) {
-                    showLoggedIn(avatarUrl)
-                } else {
-                    showLoggedOut()
-                }
-            }.onFailure {
-                AppLog.w("MainActivity", "refreshSidebarUser failed", it)
-            }
-        }
+    private fun refreshSession() {
+        BiliSession.syncCredentials()
+        userRefreshJob?.cancel()
+        userRefreshJob = lifecycleScope.launch { BiliSession.refresh() }
     }
 
-    private fun showLoggedIn(avatarUrl: String?) {
-        binding.btnSidebarLogin.visibility = android.view.View.GONE
-        binding.ivSidebarUser.visibility = android.view.View.VISIBLE
-        val normalizedUrl = blbl.cat3399.core.image.ImageUrl.avatar(avatarUrl)
-        blbl.cat3399.core.image.ImageLoader.loadInto(binding.ivSidebarUser, normalizedUrl)
-        if (binding.btnSidebarLogin.isFocused) {
-            binding.ivSidebarUser.requestFocus()
-        }
-    }
-
-    private fun showLoggedOut() {
-        binding.ivSidebarUser.visibility = android.view.View.GONE
-        binding.btnSidebarLogin.visibility = android.view.View.VISIBLE
-        if (binding.ivSidebarUser.isFocused) {
-            binding.btnSidebarLogin.requestFocus()
-        }
+    override fun openAccountDetails() {
+        if (BiliSession.state.value.canAccessPersonal) showUserInfoOverlay() else openQrLogin()
     }
 
     private fun ensureInitialFocus() {
         if (currentFocus != null) return
-        val pos = navAdapter.selectedAdapterPosition().takeIf { it >= 0 } ?: 0
-        binding.recyclerSidebar.post {
-            if (currentFocus != null) return@post
-            val vh = binding.recyclerSidebar.findViewHolderForAdapterPosition(pos)
-            if (vh != null) {
-                vh.itemView.requestFocus()
-                return@post
-            }
-            binding.recyclerSidebar.scrollToPosition(pos)
-            binding.recyclerSidebar.post {
-                if (currentFocus == null) {
-                    binding.recyclerSidebar.findViewHolderForAdapterPosition(pos)?.itemView?.requestFocus()
-                }
-            }
-        }
+        if (!focusPageContent()) binding.btnCollapsedNavigation.root.requestFocus()
     }
 
-    private fun forceInitialSidebarFocusIfNeeded() {
-        if (!needForceInitialSidebarFocus) return
-        val focused = currentFocus
-        if (focused == null || !FocusTreeUtils.isDescendantOf(focused, binding.recyclerSidebar)) {
-            focusSidebarFirstNav()
+    private fun forceInitialTopNavigationFocusIfNeeded() {
+        if (topNavigationFocusReady) return
+        binding.root.doOnPreDraw {
+            if (needForceInitialTopNavigationFocus) {
+                if (!focusPageContent()) binding.btnCollapsedNavigation.root.requestFocus()
+                needForceInitialTopNavigationFocus = false
+            }
+            topNavigationFocusReady = true
         }
-        needForceInitialSidebarFocus = false
     }
 
     private fun restoreFocusAfterResume() {
+        if (pausedFocusWasInMain) {
+            binding.root.post { focusMainFromTopNavigation() }
+            return
+        }
         val desired = pausedFocusedView?.get()
         if (desired != null && desired.isAttachedToWindow && desired.isShown) {
             binding.root.post { desired.requestFocus() }
@@ -1098,213 +1410,148 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
             return
         }
 
-        val focusedNow = currentFocus
-        if (focusedNow != null && isInSidebar(focusedNow)) {
-            // Avoid stealing focus back into main if a child fragment has already restored focus
-            // (e.g. returning from playback and detail page restores a specific card).
-            binding.root.post {
-                val cur = currentFocus
-                if (cur != null && isInSidebar(cur)) {
-                    focusMainFromSidebar()
-                }
-            }
+        if (currentFocus?.let(::isInTopNavigation) == true) {
+            binding.root.post { focusMainFromTopNavigation() }
         }
     }
 
-    private fun isInSidebar(view: View): Boolean = FocusTreeUtils.isDescendantOf(view, binding.sidebar)
+    private fun isInTopNavigation(view: View): Boolean = FocusTreeUtils.isDescendantOf(view, binding.topNavigation)
+
+    private fun isInExpandedSidebar(view: View): Boolean = FocusTreeUtils.isDescendantOf(view, binding.navigationPanel)
 
     private fun isInMainContainer(view: View): Boolean = FocusTreeUtils.isDescendantOf(view, binding.mainContainer)
 
-    private fun focusSidebarFirstNav(): Boolean = focusSidebarNavAt(0)
-
-    private fun focusSidebarSelectedNav(): Boolean {
-        val pos = navAdapter.selectedAdapterPosition().takeIf { it >= 0 } ?: 0
-        return focusSidebarNavAt(pos)
+    override fun requestFocusTopNavigationSelected(): Boolean {
+        val key = MainRootNavRegistry.normalizeVisibleTopNavKey(currentTopNavKey)
+        expandSidebar(focusSelected = false)
+        return focusTopNavigationKey(key)
     }
 
-    override fun requestFocusSidebarSelectedNav(): Boolean {
-        return focusSidebarSelectedNav()
-    }
-
-    private fun focusSidebarNavAt(position: Int): Boolean {
-        if (position < 0 || position >= navAdapter.itemCount) return false
-        clearPendingSidebarCollapseAfterMainFocus()
-        setSidebarExpanded(expanded = true)
-        binding.recyclerSidebar.post {
-            val vh = binding.recyclerSidebar.findViewHolderForAdapterPosition(position)
-            if (vh != null) {
-                vh.itemView.requestFocus()
-                return@post
-            }
-            binding.recyclerSidebar.scrollToPosition(position)
-            binding.recyclerSidebar.post {
-                binding.recyclerSidebar.findViewHolderForAdapterPosition(position)?.itemView?.requestFocus()
-            }
+    private fun focusTopNavigationKey(key: String): Boolean {
+        val token = ++focusRequestToken
+        if (!sidebarExpanded) expandSidebar(focusSelected = false)
+        if (key != MainNavigationKeys.MY_ACCOUNT &&
+            key != MainTopNavAdapter.KEY_SETTINGS &&
+            key !in BiliClient.prefs.topNavigationVisibleKeys
+        ) return false
+        val position = navAdapter.positionOf(key)
+        if (position < 0) return false
+        val recycler = binding.recyclerTopNav
+        fun focusAttached(): Boolean {
+            val item = recycler.findViewHolderForAdapterPosition(position)?.itemView ?: return false
+            val focused = item.requestFocus() || item.requestFocusFromTouch()
+            item.requestRectangleOnScreen(android.graphics.Rect(0, 0, item.width, item.height), true)
+            return focused
+        }
+        if (focusAttached()) return true
+        recycler.scrollToPosition(position)
+        recycler.doOnPreDraw {
+            if (focusRequestToken == token && navAdapter.positionOf(key) == position) focusAttached()
         }
         return true
     }
 
-    private fun focusMainFromSidebar(): Boolean {
+    override fun requestFocusTopNavigationAdjacent(direction: Int): Boolean {
+        if (direction == 0) return requestFocusTopNavigationSelected()
+        val sequence = topNavigationFocusSequence()
+        val index = sequence.indexOf(currentTopNavKey).takeIf { it >= 0 } ?: 0
+        if (index < 0) return requestFocusTopNavigationSelected()
+        val target = (index + if (direction < 0) -1 else 1).coerceIn(sequence.indices)
+        return focusTopNavigationSequenceIndex(sequence, target)
+    }
+
+    private fun focusMainFromTopNavigation(): Boolean {
+        if (sidebarExpanded) return collapseSidebar(restoreMainFocus = true)
+        return focusPageContent()
+    }
+
+    private fun focusPageContent(): Boolean {
         val rootFragment = currentRootFragment() ?: return false
         val fragmentView = rootFragment.view ?: return false
-        val armSidebarCollapse = BiliClient.prefs.mainAutoHideSidebarOnEnterContent
 
-        fun armSidebarCollapseAfterFocusTransfer() {
-            if (armSidebarCollapse) {
-                prepareSidebarCollapseAfterMainFocus()
-            } else {
-                clearPendingSidebarCollapseAfterMainFocus()
-            }
-        }
+        if ((rootFragment as? PageSectionFocusHost)?.requestFocusPageSection() == true) return true
 
-        val recyclerFollowing = fragmentView.findViewById<RecyclerView?>(R.id.recycler_following)
-        if (recyclerFollowing != null) {
-            val lastMain = lastMainFocusedView?.get()
-            if (lastMain != null &&
-                lastMain.isAttachedToWindow &&
-                lastMain.isShown &&
-                FocusTreeUtils.isDescendantOf(lastMain, recyclerFollowing)
-            ) {
-                armSidebarCollapseAfterFocusTransfer()
-                lastMain.requestFocus()
-                return true
-            }
+        val host = rootFragment as? TabContentSwitchFocusHost
+        if (host != null && host.requestFocusCurrentPagePrimaryItemFromContentSwitch()) return true
 
-            armSidebarCollapseAfterFocusTransfer()
-            recyclerFollowing.post outer@{
-                val cur = currentFocus
-                if (cur != null && !isInSidebar(cur)) return@outer
-                val vh = recyclerFollowing.findViewHolderForAdapterPosition(0)
-                if (vh != null) {
-                    vh.itemView.requestFocus()
-                    return@outer
-                }
-                if (recyclerFollowing.adapter?.itemCount == 0) {
-                    recyclerFollowing.requestFocus()
-                    return@outer
-                }
-                recyclerFollowing.scrollToPosition(0)
-                recyclerFollowing.post inner@{
-                    val cur2 = currentFocus
-                    if (cur2 != null && !isInSidebar(cur2)) return@inner
-                    recyclerFollowing.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() ?: recyclerFollowing.requestFocus()
-                }
-            }
-            return true
-        }
-
-        val lastMain = lastMainFocusedView?.get()
-        val tabLayout = fragmentView.findViewById<com.google.android.material.tabs.TabLayout?>(R.id.tab_layout)
-        val lastMainIsInTabs = tabLayout != null && lastMain != null && FocusTreeUtils.isDescendantOf(lastMain, tabLayout)
-        if (!lastMainIsInTabs && lastMain != null && lastMain.isAttachedToWindow && lastMain.isShown && isInMainContainer(lastMain)) {
-            armSidebarCollapseAfterFocusTransfer()
+        val lastMain = pageFocusedViews[currentTopNavKey]?.get()
+        if (lastMain != null && lastMain.isAttachedToWindow && lastMain.isShown && FocusTreeUtils.isDescendantOf(lastMain, fragmentView)) {
             lastMain.requestFocus()
             return true
         }
 
-        // Prefer entering the current page content (cards) for TabLayout+ViewPager pages.
-        // This avoids landing on the tab strip when content is available but not yet laid out.
-        if (tabLayout?.isShown == true) {
-            val host = rootFragment as? TabContentSwitchFocusHost
-            if (host != null) {
-                armSidebarCollapseAfterFocusTransfer()
-                host.requestFocusCurrentPagePrimaryItemFromContentSwitch()
-                return true
-            }
-        }
-
         val recycler =
-            fragmentView.findViewById<RecyclerView?>(R.id.recycler_dynamic)
+            fragmentView.findViewById<RecyclerView?>(R.id.recycler_following)
+                ?: fragmentView.findViewById<RecyclerView?>(R.id.recycler_dynamic)
                 ?: fragmentView.findViewById<RecyclerView?>(R.id.recycler)
-
         if (recycler != null) {
-            armSidebarCollapseAfterFocusTransfer()
-            recycler.post outer@{
-                val cur = currentFocus
-                if (cur != null && !isInSidebar(cur)) return@outer
-                val vh = recycler.findViewHolderForAdapterPosition(0)
-                if (vh != null) {
-                    vh.itemView.requestFocus()
-                    return@outer
-                }
-                recycler.scrollToPosition(0)
-                recycler.post inner@{
-                    val cur2 = currentFocus
-                    if (cur2 != null && !isInSidebar(cur2)) return@inner
-                    recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() ?: recycler.requestFocus()
+            recycler.post {
+                val current = currentFocus
+                if (current != null && !isInTopNavigation(current) && !isInMainContainer(current)) return@post
+                val selectedChild = (0 until recycler.childCount)
+                    .map { recycler.getChildAt(it) }
+                    .firstOrNull { it?.isSelected == true }
+                if (selectedChild != null && selectedChild.requestFocus()) return@post
+                val first = recycler.findViewHolderForAdapterPosition(0)?.itemView
+                if (first != null) {
+                    first.requestFocus()
+                } else if ((recycler.adapter?.itemCount ?: 0) == 0) {
+                    recycler.requestFocus()
+                } else {
+                    recycler.scrollToPosition(0)
+                    recycler.post {
+                        recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() ?: recycler.requestFocus()
+                    }
                 }
             }
             return true
         }
 
-        if (tabLayout != null) {
-            val tabStrip = tabLayout.getChildAt(0) as? ViewGroup
-            val pos = tabLayout.selectedTabPosition.takeIf { it >= 0 } ?: 0
-            armSidebarCollapseAfterFocusTransfer()
-            tabStrip?.getChildAt(pos)?.requestFocus()
+        val firstFocusable = findFirstFocusableView(fragmentView)
+        if (firstFocusable != null) {
+            firstFocusable.requestFocus()
             return true
         }
+        fragmentView.isFocusable = true
+        return fragmentView.requestFocus()
+    }
 
-        val dynamicLoginBtn = fragmentView.findViewById<View?>(R.id.btn_login)
-        if (dynamicLoginBtn != null && dynamicLoginBtn.isShown && dynamicLoginBtn.isFocusable) {
-            armSidebarCollapseAfterFocusTransfer()
-            dynamicLoginBtn.requestFocus()
-            return true
+    private fun findFirstFocusableView(root: View): View? {
+        if (root.visibility != View.VISIBLE || !root.isShown) return null
+        if (root.isFocusable && root.isEnabled) return root
+        val group = root as? ViewGroup ?: return null
+        for (index in 0 until group.childCount) {
+            findFirstFocusableView(group.getChildAt(index))?.let { return it }
         }
-
-        armSidebarCollapseAfterFocusTransfer()
-        fragmentView.requestFocus()
-        return true
+        return null
     }
 
-    private fun prepareSidebarCollapseAfterMainFocus() {
-        pendingSidebarCollapseAfterMainFocus = true
-        val token = ++pendingSidebarCollapseToken
-        binding.root.postDelayed(
-            {
-                if (pendingSidebarCollapseToken != token) return@postDelayed
-                pendingSidebarCollapseAfterMainFocus = false
-            },
-            SIDEBAR_COLLAPSE_ARM_TIMEOUT_MS,
-        )
+    private fun topNavigationFocusSequence(): List<String> =
+        BiliClient.prefs.topNavigationVisibleKeys +
+            MainNavigationKeys.MY_ACCOUNT +
+            MainTopNavAdapter.KEY_SETTINGS
+
+    private fun focusTopNavigationSequenceIndex(sequence: List<String>, index: Int): Boolean {
+        val key = sequence.getOrNull(index) ?: return false
+        return focusTopNavigationKey(key)
     }
 
-    private fun clearPendingSidebarCollapseAfterMainFocus() {
-        pendingSidebarCollapseAfterMainFocus = false
-        pendingSidebarCollapseToken++
+    private fun hasPageSectionAbove(view: View): Boolean {
+        val root = currentRootFragment() ?: return false
+        if (root !is PageSectionFocusHost) return false
+        val strip = root.view?.findViewById<View>(R.id.tab_layout) ?: return false
+        return strip.isShown && !FocusTreeUtils.isDescendantOf(view, strip)
     }
 
-    private fun maybeCollapseSidebarAfterMainFocusTransfer(newFocus: View) {
-        if (!pendingSidebarCollapseAfterMainFocus) return
-        clearPendingSidebarCollapseAfterMainFocus()
-        if (!BiliClient.prefs.mainAutoHideSidebarOnEnterContent) return
-        if (!isInMainContainer(newFocus)) return
-        setSidebarExpanded(expanded = false)
-    }
-
-    private fun setSidebarExpanded(expanded: Boolean) {
-        if (isSidebarExpanded == expanded) return
-        val mainLayoutParams = binding.mainContainer.layoutParams as? ConstraintLayout.LayoutParams ?: return
-        if (expanded) {
-            binding.sidebar.visibility = View.VISIBLE
-            mainLayoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
-            mainLayoutParams.startToEnd = R.id.sidebar
-        } else {
-            binding.sidebar.visibility = View.GONE
-            mainLayoutParams.startToEnd = ConstraintLayout.LayoutParams.UNSET
-            mainLayoutParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-        }
-        binding.mainContainer.layoutParams = mainLayoutParams
-        isSidebarExpanded = expanded
-    }
-
-    private fun focusSelectedTabInCurrentFragment(): Boolean {
-        val fragmentView = currentRootFragment()?.view ?: return false
-        val tabLayout = fragmentView.findViewById<com.google.android.material.tabs.TabLayout?>(R.id.tab_layout) ?: return false
-        val tabStrip = tabLayout.getChildAt(0) as? ViewGroup ?: return false
-        val pos = tabLayout.selectedTabPosition.takeIf { it >= 0 } ?: 0
-        tabLayout.post { tabStrip.getChildAt(pos)?.requestFocus() }
-        return true
+    private fun canEnterTopNavigationFrom(view: View): Boolean {
+        val next = view.focusSearch(View.FOCUS_UP)
+        if (next != null && isInTopNavigation(next)) return true
+        if (next != null && isInMainContainer(next)) return false
+        val focusLoc = IntArray(2)
+        val containerLoc = IntArray(2)
+        view.getLocationOnScreen(focusLoc)
+        binding.mainContainer.getLocationOnScreen(containerLoc)
+        return focusLoc[1] - containerLoc[1] <= dp(32f)
     }
 
     private fun tryMoveDynamicVideoToFollowing(focused: View): Boolean {
@@ -1347,81 +1594,6 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
         return lp.spanIndex == 0
     }
 
-    private fun moveSidebarFocus(up: Boolean): Boolean {
-        val focused = currentFocus ?: return false
-
-        val movingToNav = !up && (focused == binding.ivSidebarUser || focused == binding.btnSidebarLogin)
-        if (movingToNav) return focusSidebarFirstNav()
-
-        if (focused == binding.btnSidebarSettings) {
-            if (!up) return true
-            return focusSidebarNavAt(navAdapter.itemCount - 1)
-        }
-
-        val inNav = FocusTreeUtils.isDescendantOf(focused, binding.recyclerSidebar)
-        if (!inNav) {
-            if (up) return true
-            binding.btnSidebarSettings.requestFocus()
-            return true
-        }
-
-        val holder = binding.recyclerSidebar.findContainingViewHolder(focused) ?: return false
-        val pos = holder.bindingAdapterPosition.takeIf { it != RecyclerView.NO_POSITION } ?: return false
-
-        return if (up) {
-            if (pos > 0) {
-                focusSidebarNavAt(pos - 1)
-            } else {
-                if (binding.ivSidebarUser.visibility == View.VISIBLE) {
-                    binding.ivSidebarUser.requestFocus()
-                } else if (binding.btnSidebarLogin.visibility == View.VISIBLE) {
-                    binding.btnSidebarLogin.requestFocus()
-                }
-                true
-            }
-        } else {
-            if (pos < navAdapter.itemCount - 1) {
-                focusSidebarNavAt(pos + 1)
-            } else {
-                binding.btnSidebarSettings.requestFocus()
-                true
-            }
-        }
-    }
-
-    private fun canEnterSidebarFrom(view: View): Boolean {
-        val rv = view.findAncestorRecyclerView()
-        if (rv != null) {
-            val lm = rv.layoutManager
-            if (lm is StaggeredGridLayoutManager) {
-                val child = rv.findContainingItemView(view) ?: view
-                val lp = child.layoutParams as? StaggeredGridLayoutManager.LayoutParams
-                if (lp != null && lp.spanIndex == 0) {
-                    val focusLoc = IntArray(2)
-                    val containerLoc = IntArray(2)
-                    child.getLocationOnScreen(focusLoc)
-                    binding.mainContainer.getLocationOnScreen(containerLoc)
-                    return (focusLoc[0] - containerLoc[0]) <= dp(24f)
-                }
-            }
-        }
-
-        val focusLoc = IntArray(2)
-        val containerLoc = IntArray(2)
-        view.getLocationOnScreen(focusLoc)
-        binding.mainContainer.getLocationOnScreen(containerLoc)
-        return (focusLoc[0] - containerLoc[0]) <= dp(24f)
-    }
-
-    private fun View.findAncestorRecyclerView(): RecyclerView? {
-        var current: View? = this
-        while (current != null) {
-            if (current is RecyclerView) return current
-            current = current.parent as? View
-        }
-        return null
-    }
-
     private fun dp(valueDp: Float): Int {
         val dm = resources.displayMetrics
         return (valueDp * dm.density).toInt()
@@ -1445,7 +1617,8 @@ class MainActivity : BaseActivity(), SidebarFocusHost {
 
     companion object {
         private const val STATE_KEY_ROOT_NAV_ID = "MainActivity.rootNavId"
+        private const val STATE_KEY_TOP_NAV_KEY = "MainActivity.topNavKey"
+        private const val STATE_KEY_PENDING_LOGIN_TARGET = "MainActivity.pendingLoginTarget"
         private const val BACK_DOUBLE_PRESS_WINDOW_MS = 1_500L
-        private const val SIDEBAR_COLLAPSE_ARM_TIMEOUT_MS = 1_000L
     }
 }

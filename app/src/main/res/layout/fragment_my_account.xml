@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/blblContentBackground">
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/overview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:padding="28dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:clipChildren="false">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="24dp">
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/avatar"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:src="@drawable/ic_nav_my"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="账号头像"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay_Blbl_Circular" />
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="18dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/account_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="我的"
+                        android:textColor="?attr/blblOnPageBackdrop"
+                        android:textSize="22sp" />
+                    <TextView
+                        android:id="@+id/account_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="?attr/blblOnPageBackdropSecondary"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:clipChildren="false"
+                android:clipToPadding="false">
+                <TextView
+                    android:id="@+id/btn_history"
+                    style="@style/Widget.Blbl.MyAction"
+                    android:text="历史" />
+                <TextView
+                    android:id="@+id/btn_favorites"
+                    style="@style/Widget.Blbl.MyAction"
+                    android:text="收藏" />
+                <TextView
+                    android:id="@+id/btn_watch_later"
+                    style="@style/Widget.Blbl.MyAction"
+                    android:text="稍后再看" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:clipChildren="false"
+                android:clipToPadding="false">
+                <TextView
+                    android:id="@+id/btn_bangumi"
+                    style="@style/Widget.Blbl.MyAction"
+                    android:text="追番" />
+                <TextView
+                    android:id="@+id/btn_drama"
+                    style="@style/Widget.Blbl.MyAction"
+                    android:text="追剧" />
+                <TextView
+                    android:id="@+id/btn_likes"
+                    style="@style/Widget.Blbl.MyAction"
+                    android:text="最近点赞" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:clipChildren="false"
+                android:clipToPadding="false">
+                <TextView
+                    android:id="@+id/btn_account"
+                    style="@style/Widget.Blbl.MyAction"
+                    android:layout_width="match_parent"
+                    android:layout_weight="0"
+                    android:text="登录 / 账号管理" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+    <FrameLayout
+        android:id="@+id/personal_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+</FrameLayout>

@@ -32,3 +32,29 @@ fun TabLayout.enableDpadTabFocus(
         }
     }
 }
+
+/** Keep section navigation inside the strip; selection still follows the user's focus preference. */
+fun TabLayout.bindDpadSectionNavigation(onDown: () -> Boolean, onUp: () -> Boolean) {
+    val strip = getChildAt(0) as? ViewGroup ?: return
+    for (index in 0 until strip.childCount) {
+        strip.getChildAt(index).setOnKeyListener { _, key, event ->
+            val confirm = key == android.view.KeyEvent.KEYCODE_DPAD_CENTER || key == android.view.KeyEvent.KEYCODE_ENTER
+            if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener confirm
+            when (key) {
+                android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    val next = (index + if (key == android.view.KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1)
+                        .coerceIn(0 until strip.childCount)
+                    strip.getChildAt(next).requestFocus()
+                    true
+                }
+                android.view.KeyEvent.KEYCODE_DPAD_UP -> onUp()
+                android.view.KeyEvent.KEYCODE_DPAD_DOWN -> { onDown(); true }
+                android.view.KeyEvent.KEYCODE_DPAD_CENTER, android.view.KeyEvent.KEYCODE_ENTER -> {
+                    if (event.repeatCount == 0) getTabAt(index)?.select()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+}

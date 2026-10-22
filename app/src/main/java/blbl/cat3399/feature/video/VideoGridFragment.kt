@@ -6,6 +6,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import blbl.cat3399.core.account.BiliSession
+import blbl.cat3399.core.ui.GridLoadState
+import blbl.cat3399.core.ui.GridFocusBookmark
+import kotlinx.coroutines.Job
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,21 +20,19 @@ import blbl.cat3399.core.model.VideoCard
 import blbl.cat3399.core.net.BiliClient
 import blbl.cat3399.core.paging.PagedGridStateMachine
 import blbl.cat3399.core.paging.appliedOrNull
-import blbl.cat3399.core.ui.AppToast
 import blbl.cat3399.core.ui.DpadGridController
 import blbl.cat3399.core.ui.FocusTreeUtils
 import blbl.cat3399.core.ui.GridViewportFillMonitor
 import blbl.cat3399.core.ui.GridSpanPolicy
-import blbl.cat3399.core.ui.TabContentSwitchFocusHost
 import blbl.cat3399.core.ui.TabSwitchFocusTarget
 import blbl.cat3399.core.ui.postIfAlive
-import blbl.cat3399.core.ui.postIfAttached
 import blbl.cat3399.core.ui.installGridViewportFillMonitor
 import blbl.cat3399.core.ui.requestFocusAdapterPositionReliable
 import blbl.cat3399.core.ui.requestFocusFirstItemOrSelfAfterRefresh
 import blbl.cat3399.databinding.FragmentVideoGridBinding
 import blbl.cat3399.feature.following.openUpDetailFromVideoCard
 import blbl.cat3399.feature.player.VideoCardPlaylistPage
+import blbl.cat3399.ui.MainNavigationHost
 import blbl.cat3399.ui.RefreshKeyHandler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -49,6 +51,12 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
 
     private var _binding: FragmentVideoGridBinding? = null
     private val binding get() = _binding!!
+    private var gridLoadState: GridLoadState? = null
+    private val focusBookmark = GridFocusBookmark()
+    private var loadJob: Job? = null
+    private var contentSessionRevision = BiliSession.state.value.revision
+    private var lastRequestWasRefresh = true
+    private var refreshCheckpoint: PagedGridStateMachine.State<PagingKey>? = null
 
     private lateinit var adapter: VideoCardAdapter
     private var preDrawListener: android.view.ViewTreeObserver.OnPreDrawListener? = null
@@ -112,8 +120,13 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
                 )
         }
         binding.recycler.adapter = adapter
+        gridLoadState = GridLoadState(binding, "暂无可显示的视频", activity as? MainNavigationHost, { isResumed }) {
+            gridLoadState?.loading()
+            if (lastRequestWasRefresh || adapter.itemCount == 0) resetAndLoad() else loadNextPage()
+        }
         binding.recycler.setHasFixedSize(true)
         binding.recycler.layoutManager = GridLayoutManager(requireContext(), spanCountForWidth())
+        focusBookmark.attach(binding.recycler, savedInstanceState)
         (binding.recycler.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)?.supportsChangeAnimations = false
         binding.recycler.clearOnScrollListeners()
         binding.recycler.addOnScrollListener(
@@ -154,7 +167,7 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
                             switchToNextTabFromContentEdge()
                         }
 
-                        override fun canLoadMore(): Boolean = !paging.snapshot().endReached
+                        override fun canLoadMore(): Boolean = gridLoadState?.hasFailure != true && !paging.snapshot().endReached
 
                         override fun loadMore() {
                             loadNextPage()
@@ -172,7 +185,7 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
                 isEnabled = { _binding != null && isResumed },
                 canLoadMore = {
                     val s = paging.snapshot()
-                    !s.isLoading && !s.endReached
+                    gridLoadState?.hasFailure != true && !s.isLoading && !s.endReached
                 },
                 loadMore = { loadNextPage() },
             )
@@ -201,6 +214,15 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
 
     override fun onResume() {
         super.onResume()
+        val revision = BiliSession.state.value.revision
+        if (contentSessionRevision != revision) {
+            contentSessionRevision = revision
+            loadJob?.cancel()
+            binding.swipeRefresh.isRefreshing = false
+            adapter.submit(emptyList())
+            initialLoadTriggered = false
+            refreshCheckpoint = null
+        }
         AppLog.d("VideoGrid", "onResume source=$source rid=$rid t=${SystemClock.uptimeMillis()}")
         (binding.recycler.layoutManager as? GridLayoutManager)?.spanCount = spanCountForWidth()
         viewportFillMonitor?.scheduleCheck()
@@ -233,13 +255,18 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
     }
 
     private fun resetAndLoad() {
+        contentSessionRevision = BiliSession.state.value.revision
+        loadJob?.cancel()
         AppLog.d("VideoGrid", "resetAndLoad source=$source rid=$rid t=${SystemClock.uptimeMillis()}")
+        loadJob?.cancel()
+        refreshCheckpoint = paging.snapshot().takeIf { adapter.itemCount > 0 }
         paging.reset()
         loadedStableKeys.clear()
         loadNextPage(isRefresh = true)
     }
 
     private fun loadNextPage(isRefresh: Boolean = false) {
+        if (gridLoadState?.hasFailure == true && !isRefresh) return
         val startSnap = paging.snapshot()
         if (startSnap.isLoading || startSnap.endReached) return
         val startGen = startSnap.generation
@@ -249,7 +276,11 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
             "VideoGrid",
             "loadNextPage start source=$source rid=$rid page=${startKey.page} refresh=$isRefresh t=$startAt",
         )
-        viewLifecycleOwner.lifecycleScope.launch {
+        val requestBinding = binding
+        val sessionRevision = BiliSession.state.value.revision
+        lastRequestWasRefresh = isRefresh
+        gridLoadState?.loading()
+        loadJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val result =
                     paging.loadNextPage(
@@ -264,7 +295,10 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
                         },
                     )
 
+                if (_binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
                 val applied = result.appliedOrNull() ?: return@launch
+                if (isRefresh) refreshCheckpoint = null
+                gridLoadState?.content()
                 applied.items.forEach { loadedStableKeys.add(it.stableKey()) }
                 if (applied.isRefresh) {
                     adapter.submit(applied.items)
@@ -302,10 +336,18 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
                 )
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
+                if (_binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
+                if (isRefresh) {
+                    refreshCheckpoint?.let { paging.restoreCursorAfterFailedRefresh(it, startGen) }
+                    refreshCheckpoint = null
+                    loadedStableKeys.clear()
+                    loadedStableKeys.addAll(adapter.snapshot().map { it.stableKey() })
+                }
+                pendingFocusFirstCardAfterRefresh = false
                 AppLog.e("VideoGrid", "load failed source=$source rid=$rid page=${startKey.page}", t)
-                context?.let { AppToast.show(it, "加载失败，可查看 Logcat(标签 BLBL)") }
+                gridLoadState?.failure(t, sessionRevision)
             } finally {
-                if (isRefresh && paging.snapshot().generation == startGen) _binding?.swipeRefresh?.isRefreshing = false
+                if (isRefresh && paging.snapshot().generation == startGen && _binding === requestBinding) _binding?.swipeRefresh?.isRefreshing = false
                 AppLog.d(
                     "VideoGrid",
                     "loadNextPage end source=$source rid=$rid page=${paging.snapshot().nextKey.page} refresh=$isRefresh t=${SystemClock.uptimeMillis()}",
@@ -324,35 +366,64 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
     }
 
     override fun requestFocusFirstCardFromTab(): Boolean {
+        focusBookmark.beginFocusRequest(activity?.currentFocus)
+        val b = _binding
+        if (b != null && isResumed) {
+            if (adapter.itemCount == 0 && b.btnRetry.isShown && b.btnRetry.requestFocus()) {
+                clearPendingFocusFlags()
+                return true
+            }
+            if (focusBookmark.requestFocus(b.recycler) { _binding === b && isResumed }) {
+                clearPendingFocusFlags()
+                return true
+            }
+        }
         pendingFocusFirstCardFromTab = true
         pendingFocusFirstCardFromContentSwitch = false
         pendingFocusFirstCardFromBackToTab0 = false
         if (!isResumed) return true
-        return maybeConsumePendingFocusFirstCard()
+        return maybeConsumePendingFocusFirstCard(allowFromNavigation = true)
     }
 
     override fun requestFocusFirstCardFromContentSwitch(): Boolean {
+        focusBookmark.beginFocusRequest(activity?.currentFocus)
+        val b = _binding
+        if (b != null && isResumed) {
+            if (adapter.itemCount == 0 && b.btnRetry.isShown && b.btnRetry.requestFocus()) {
+                clearPendingFocusFlags()
+                return true
+            }
+            if (focusBookmark.requestFocus(b.recycler) { _binding === b && isResumed }) {
+                clearPendingFocusFlags()
+                return true
+            }
+        }
         pendingFocusFirstCardFromContentSwitch = true
         pendingFocusFirstCardFromTab = false
         pendingFocusFirstCardFromBackToTab0 = false
         if (!isResumed) return true
-        return maybeConsumePendingFocusFirstCard()
+        return maybeConsumePendingFocusFirstCard(allowFromNavigation = true)
     }
 
     override fun requestFocusFirstCardFromBackToTab0(): Boolean {
+        focusBookmark.beginFocusRequest(activity?.currentFocus)
         pendingFocusFirstCardFromBackToTab0 = true
         pendingFocusFirstCardFromTab = false
         pendingFocusFirstCardFromContentSwitch = false
         if (!isResumed) return true
-        return maybeConsumePendingFocusFirstCard()
+        return maybeConsumePendingFocusFirstCard(allowFromNavigation = true)
     }
 
-    private fun maybeConsumePendingFocusFirstCard(): Boolean {
+    private fun maybeConsumePendingFocusFirstCard(allowFromNavigation: Boolean = false): Boolean {
         if (!pendingFocusFirstCardFromTab && !pendingFocusFirstCardFromContentSwitch && !pendingFocusFirstCardFromBackToTab0) return false
         if (!isAdded || _binding == null) return false
         if (!isResumed) return false
 
         val focused = activity?.currentFocus
+        if (!allowFromNavigation && !focusBookmark.canApplyFocusRequest(binding.recycler)) {
+            clearPendingFocusFlags()
+            return false
+        }
         if (focused != null && focused != binding.recycler && FocusTreeUtils.isDescendantOf(focused, binding.recycler)) {
             // If we are already focused inside the grid, consider the request satisfied, except for
             // "Back -> tab0 content" which must deterministically land on the first card.
@@ -371,13 +442,8 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
             }
         }
 
-        val parentView = parentFragment?.view
-        val tabLayout =
-            parentView?.findViewById<com.google.android.material.tabs.TabLayout?>(blbl.cat3399.R.id.tab_layout)
         if (pendingFocusFirstCardFromTab) {
-            if (focused == null || tabLayout == null || !FocusTreeUtils.isDescendantOf(focused, tabLayout)) {
-                pendingFocusFirstCardFromTab = false
-            }
+            pendingFocusFirstCardFromTab = false
         }
 
         if (!this::adapter.isInitialized) return false
@@ -389,7 +455,7 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
         val targetPosition = resolvePendingFocusTarget(itemCount = adapter.itemCount)
         val b = _binding ?: return false
         val recycler = b.recycler
-        val isUiAlive = { _binding === b && isResumed }
+        val isUiAlive = { _binding === b && isResumed && focusBookmark.canApplyFocusRequest(recycler) }
         recycler.requestFocusAdapterPositionReliable(
             position = targetPosition,
             smoothScroll = false,
@@ -410,6 +476,7 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
     }
 
     private fun clearPendingFocusFlags() {
+        focusBookmark.finishFocusRequest()
         pendingFocusFirstCardFromTab = false
         pendingFocusFirstCardFromContentSwitch = false
         pendingFocusFirstCardFromBackToTab0 = false
@@ -432,49 +499,41 @@ class VideoGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTarget {
     }
 
     private fun focusSelectedTabIfAvailable(): Boolean {
-        val parentView = parentFragment?.view ?: return false
-        val tabLayout = parentView.findViewById<com.google.android.material.tabs.TabLayout?>(blbl.cat3399.R.id.tab_layout) ?: return false
-        val tabStrip = tabLayout.getChildAt(0) as? ViewGroup ?: return false
-        val pos = tabLayout.selectedTabPosition.takeIf { it >= 0 } ?: 0
-        tabStrip.getChildAt(pos)?.requestFocus() ?: return false
-        return true
+        captureCurrentFocusedAdapterPosition()
+        var parent = parentFragment
+        while (parent != null) {
+            if ((parent as? blbl.cat3399.core.ui.PageSectionFocusHost)?.requestFocusPageSection() == true) return true
+            parent = parent.parentFragment
+        }
+        return (activity as? MainNavigationHost)?.requestFocusTopNavigationSelected() == true
     }
 
     private fun switchToNextTabFromContentEdge(): Boolean {
-        val parentView = parentFragment?.view ?: return false
-        val tabLayout = parentView.findViewById<com.google.android.material.tabs.TabLayout?>(blbl.cat3399.R.id.tab_layout) ?: return false
-        if (tabLayout.tabCount <= 1) return false
-        val tabStrip = tabLayout.getChildAt(0) as? ViewGroup ?: return false
-        val cur = tabLayout.selectedTabPosition.takeIf { it >= 0 } ?: 0
-        val next = cur + 1
-        if (next >= tabLayout.tabCount) return false
         captureCurrentFocusedAdapterPosition()
-        tabLayout.getTabAt(next)?.select() ?: return false
-        tabLayout.postIfAttached {
-            (parentFragment as? TabContentSwitchFocusHost)?.requestFocusCurrentPagePrimaryItemFromContentSwitch()
-                ?: tabStrip.getChildAt(next)?.requestFocus()
-        }
-        return true
+        return (activity as? MainNavigationHost)?.requestFocusTopNavigationAdjacent(1) == true
     }
 
     private fun switchToPrevTabFromContentEdge(): Boolean {
-        val parentView = parentFragment?.view ?: return false
-        val tabLayout = parentView.findViewById<com.google.android.material.tabs.TabLayout?>(blbl.cat3399.R.id.tab_layout) ?: return false
-        if (tabLayout.tabCount <= 1) return false
-        val tabStrip = tabLayout.getChildAt(0) as? ViewGroup ?: return false
-        val cur = tabLayout.selectedTabPosition.takeIf { it >= 0 } ?: 0
-        val prev = cur - 1
-        if (prev < 0) return false
         captureCurrentFocusedAdapterPosition()
-        tabLayout.getTabAt(prev)?.select() ?: return false
-        tabLayout.postIfAttached {
-            (parentFragment as? TabContentSwitchFocusHost)?.requestFocusCurrentPagePrimaryItemFromContentSwitch()
-                ?: tabStrip.getChildAt(prev)?.requestFocus()
-        }
-        return true
+        return (activity as? MainNavigationHost)?.requestFocusTopNavigationAdjacent(-1) == true
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        _binding?.let { focusBookmark.save(it.recycler, outState) }
     }
 
     override fun onDestroyView() {
+        _binding?.let { focusBookmark.detach(it.recycler) }
+        loadJob?.cancel()
+        loadJob = null
+        gridLoadState?.release()
+        gridLoadState = null
+        paging.invalidatePendingLoads()
+        refreshCheckpoint?.let { paging.restoreCursorAfterFailedRefresh(it, paging.snapshot().generation) }
+        refreshCheckpoint = null
+        loadedStableKeys.clear()
+        loadedStableKeys.addAll(adapter.snapshot().map { it.stableKey() })
         AppLog.d("VideoGrid", "onDestroyView source=$source rid=$rid t=${SystemClock.uptimeMillis()}")
         preDrawListener?.let { listener ->
             if (binding.recycler.viewTreeObserver.isAlive) {

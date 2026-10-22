@@ -6,14 +6,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import blbl.cat3399.core.account.BiliSession
+import blbl.cat3399.core.ui.GridLoadState
+import blbl.cat3399.core.ui.GridFocusBookmark
+import kotlinx.coroutines.Job
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
 import blbl.cat3399.core.api.BiliApi
-import blbl.cat3399.core.api.BiliApiException
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.net.BiliClient
-import blbl.cat3399.core.ui.AppToast
 import blbl.cat3399.core.ui.DpadGridController
 import blbl.cat3399.core.ui.FocusTreeUtils
 import blbl.cat3399.core.ui.postIfAlive
@@ -28,6 +30,7 @@ import blbl.cat3399.feature.video.VideoCardVisibilityFilter
 import blbl.cat3399.feature.video.buildVideoCardPlaylistToken
 import blbl.cat3399.feature.video.openVideoDetailFromCards
 import blbl.cat3399.feature.video.removeVideoCardAndRestoreFocus
+import blbl.cat3399.ui.MainNavigationHost
 import blbl.cat3399.ui.RefreshKeyHandler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -35,6 +38,9 @@ import kotlinx.coroutines.launch
 class MyLikeFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler {
     private var _binding: FragmentVideoGridBinding? = null
     private val binding get() = _binding!!
+    private var gridLoadState: GridLoadState? = null
+    private val focusBookmark = GridFocusBookmark()
+    private var loadJob: Job? = null
 
     private lateinit var adapter: VideoCardAdapter
     private var initialLoadTriggered: Boolean = false
@@ -98,8 +104,13 @@ class MyLikeFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler {
                 )
         }
         binding.recycler.adapter = adapter
+        gridLoadState = GridLoadState(binding, "还没有可显示的点赞视频", activity as? MainNavigationHost, { isResumed }) {
+            gridLoadState?.loading()
+            reload()
+        }
         binding.recycler.setHasFixedSize(true)
         binding.recycler.layoutManager = GridLayoutManager(requireContext(), spanCountForWidth(resources))
+        focusBookmark.attach(binding.recycler, savedInstanceState)
         (binding.recycler.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
         dpadGridController?.release()
         dpadGridController =
@@ -156,20 +167,40 @@ class MyLikeFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler {
     }
 
     override fun requestFocusFirstItemFromTabSwitch(): Boolean {
+        focusBookmark.beginFocusRequest(activity?.currentFocus)
+        val b = _binding
+        if (b != null && isResumed) {
+            if (adapter.itemCount == 0 && b.btnRetry.isShown && b.btnRetry.requestFocus()) {
+                pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
+                return true
+            }
+            if (focusBookmark.requestFocus(b.recycler) { _binding === b && isResumed }) {
+                pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
+                return true
+            }
+        }
         pendingFocusFirstItemFromTabSwitch = true
         if (!isResumed) return true
-        return maybeConsumePendingFocusFirstItemFromTabSwitch()
+        return maybeConsumePendingFocusFirstItemFromTabSwitch(allowFromNavigation = true)
     }
 
-    private fun maybeConsumePendingFocusFirstItemFromTabSwitch(): Boolean {
+    private fun maybeConsumePendingFocusFirstItemFromTabSwitch(allowFromNavigation: Boolean = false): Boolean {
         if (!pendingFocusFirstItemFromTabSwitch) return false
         if (!isAdded || _binding == null) return false
         if (!isResumed) return false
         if (!this::adapter.isInitialized) return false
 
         val focused = activity?.currentFocus
+        if (!allowFromNavigation && !focusBookmark.canApplyFocusRequest(binding.recycler)) {
+            pendingFocusFirstItemFromTabSwitch = false
+            focusBookmark.finishFocusRequest()
+            return false
+        }
         if (focused != null && focused != binding.recycler && FocusTreeUtils.isDescendantOf(focused, binding.recycler)) {
             pendingFocusFirstItemFromTabSwitch = false
+            focusBookmark.finishFocusRequest()
             return false
         }
 
@@ -179,17 +210,19 @@ class MyLikeFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler {
         }
 
         val recycler = binding.recycler
-        recycler.postIfAlive(isAlive = { _binding != null }) {
+        recycler.postIfAlive(isAlive = { _binding != null && isResumed && focusBookmark.canApplyFocusRequest(recycler) }) {
             val vh = recycler.findViewHolderForAdapterPosition(0)
             if (vh != null) {
                 vh.itemView.requestFocus()
                 pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
                 return@postIfAlive
             }
             recycler.scrollToPosition(0)
-            recycler.postIfAlive(isAlive = { _binding != null }) {
+            recycler.postIfAlive(isAlive = { _binding != null && isResumed && focusBookmark.canApplyFocusRequest(recycler) }) {
                 recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() ?: recycler.requestFocus()
                 pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
             }
         }
         return true
@@ -209,14 +242,16 @@ class MyLikeFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler {
     }
 
     private fun reload() {
+        loadJob?.cancel()
+        val requestBinding = binding
+        val sessionRevision = BiliSession.state.value.revision
+        gridLoadState?.loading()
         val token = ++requestToken
-        viewLifecycleOwner.lifecycleScope.launch {
+        loadJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val nav = BiliApi.nav()
-                val mid = nav.optJSONObject("data")?.optLong("mid") ?: 0L
-                if (mid <= 0L) error("invalid mid")
+                val mid = BiliSession.requireMid()
                 val list = BiliApi.spaceLikeVideoList(vmid = mid)
-                if (token != requestToken) return@launch
+                if (token != requestToken || _binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
                 if (pendingFocusFirstItemAfterRefresh) {
                     dpadGridController?.parkFocusForDataSetReset()
                 }
@@ -238,34 +273,28 @@ class MyLikeFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler {
                 }
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
+                if (_binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
                 AppLog.e("MyLike", "load failed", t)
-                val isPrivate = (t as? BiliApiException)?.apiCode == 53013
-                if (isPrivate && token == requestToken) {
-                    if (pendingFocusFirstItemAfterRefresh) {
-                        dpadGridController?.parkFocusForDataSetReset()
-                    }
-                    adapter.submit(emptyList())
-                    pendingFocusFirstItemAfterRefresh = false
-                    _binding?.recycler?.postIfAlive(isAlive = { _binding != null && isResumed }) {
-                        val recycler = binding.recycler
-                        val isUiAlive = { _binding != null && isResumed }
-                        recycler.requestFocusFirstItemOrSelfAfterRefresh(
-                            itemCount = 0,
-                            smoothScroll = false,
-                            isAlive = isUiAlive,
-                        )
-                    }
-                }
-                context?.let {
-                    AppToast.show(it, if (isPrivate) "点赞列表未公开" else "加载失败，可查看 Logcat(标签 BLBL)")
-                }
+                pendingFocusFirstItemAfterRefresh = false
+                gridLoadState?.failure(t, sessionRevision)
             } finally {
-                if (token == requestToken) _binding?.swipeRefresh?.isRefreshing = false
+                if (token == requestToken && _binding === requestBinding) _binding?.swipeRefresh?.isRefreshing = false
             }
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        _binding?.let { focusBookmark.save(it.recycler, outState) }
+    }
+
     override fun onDestroyView() {
+        _binding?.let { focusBookmark.detach(it.recycler) }
+        loadJob?.cancel()
+        loadJob = null
+        gridLoadState?.release()
+        gridLoadState = null
+        requestToken++
         initialLoadTriggered = false
         dpadGridController?.release()
         dpadGridController = null

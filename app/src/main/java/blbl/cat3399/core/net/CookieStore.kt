@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 class CookieStore(
     context: Context,
 ) : CookieJar {
+    var onCredentialsChanged: (() -> Unit)? = null
     private val prefs: SharedPreferences =
         context.getSharedPreferences("blbl_cookie_store", Context.MODE_PRIVATE)
 
@@ -33,6 +34,7 @@ class CookieStore(
             store[key] = list
         }
         persistToDisk()
+        onCredentialsChanged?.invoke()
         AppLog.d("CookieStore", "saveFromResponse host=${url.host} +${cookies.size}")
     }
 
@@ -80,6 +82,7 @@ class CookieStore(
         list.add(cookie)
         store[key] = list
         persistToDisk()
+        onCredentialsChanged?.invoke()
     }
 
     fun upsertAll(cookies: List<Cookie>) {
@@ -92,11 +95,13 @@ class CookieStore(
             store[key] = list
         }
         persistToDisk()
+        onCredentialsChanged?.invoke()
     }
 
     fun clearAll() {
         store.clear()
         prefs.edit().clear().apply()
+        onCredentialsChanged?.invoke()
     }
 
     fun exportSnapshotJson(includeExpired: Boolean = false): JSONObject {
@@ -111,6 +116,7 @@ class CookieStore(
         store.clear()
         store.putAll(parsed)
         persistToDisk(sync = sync)
+        onCredentialsChanged?.invoke()
     }
 
     private fun persistToDisk(sync: Boolean = false) {

@@ -5,6 +5,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import blbl.cat3399.core.account.BiliSession
+import blbl.cat3399.core.ui.GridLoadState
+import blbl.cat3399.core.ui.GridFocusBookmark
+import kotlinx.coroutines.Job
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -14,12 +18,12 @@ import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.net.BiliClient
 import blbl.cat3399.core.paging.PagedGridStateMachine
 import blbl.cat3399.core.paging.appliedOrNull
-import blbl.cat3399.core.ui.AppToast
 import blbl.cat3399.core.ui.DpadGridController
 import blbl.cat3399.core.ui.FocusTreeUtils
 import blbl.cat3399.core.ui.postIfAlive
 import blbl.cat3399.core.ui.requestFocusFirstItemOrSelfAfterRefresh
 import blbl.cat3399.databinding.FragmentVideoGridBinding
+import blbl.cat3399.ui.MainNavigationHost
 import blbl.cat3399.ui.RefreshKeyHandler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -27,6 +31,11 @@ import kotlinx.coroutines.launch
 class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler {
     private var _binding: FragmentVideoGridBinding? = null
     private val binding get() = _binding!!
+    private var gridLoadState: GridLoadState? = null
+    private val focusBookmark = GridFocusBookmark()
+    private var loadJob: Job? = null
+    private var lastRequestWasRefresh = true
+    private var refreshCheckpoint: PagedGridStateMachine.State<Int>? = null
 
     private val type: Int by lazy { requireArguments().getInt(ARG_TYPE) }
     private lateinit var adapter: BangumiFollowAdapter
@@ -59,8 +68,13 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
             }
         }
         binding.recycler.adapter = adapter
+        gridLoadState = GridLoadState(binding, "还没有追番或追剧记录", activity as? MainNavigationHost, { isResumed }) {
+            gridLoadState?.loading()
+            if (lastRequestWasRefresh || adapter.itemCount == 0) resetAndLoad() else loadNextPage()
+        }
         binding.recycler.setHasFixedSize(true)
         binding.recycler.layoutManager = GridLayoutManager(requireContext(), spanCountForBangumi())
+        focusBookmark.attach(binding.recycler, savedInstanceState)
         (binding.recycler.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
         binding.recycler.clearOnScrollListeners()
         dpadGridController?.release()
@@ -82,7 +96,7 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
                             switchToNextMyTabFromContentEdge()
                         }
 
-                        override fun canLoadMore(): Boolean = !paging.snapshot().endReached
+                        override fun canLoadMore(): Boolean = gridLoadState?.hasFailure != true && !paging.snapshot().endReached
 
                         override fun loadMore() {
                             loadNextPage()
@@ -134,12 +148,26 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
     }
 
     override fun requestFocusFirstItemFromTabSwitch(): Boolean {
+        focusBookmark.beginFocusRequest(activity?.currentFocus)
+        val b = _binding
+        if (b != null && isResumed) {
+            if (adapter.itemCount == 0 && b.btnRetry.isShown && b.btnRetry.requestFocus()) {
+                pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
+                return true
+            }
+            if (focusBookmark.requestFocus(b.recycler) { _binding === b && isResumed }) {
+                pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
+                return true
+            }
+        }
         pendingFocusFirstItemFromTabSwitch = true
         if (!isResumed) return true
-        return maybeConsumePendingFocusFirstItemFromTabSwitch()
+        return maybeConsumePendingFocusFirstItemFromTabSwitch(allowFromNavigation = true)
     }
 
-    private fun maybeConsumePendingFocusFirstItemFromTabSwitch(): Boolean {
+    private fun maybeConsumePendingFocusFirstItemFromTabSwitch(allowFromNavigation: Boolean = false): Boolean {
         if (!pendingFocusFirstItemFromTabSwitch) return false
         if (!isAdded || _binding == null) return false
         if (!isResumed) return false
@@ -147,8 +175,14 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
         if (pendingRestorePosition != null) return false
 
         val focused = activity?.currentFocus
+        if (!allowFromNavigation && !focusBookmark.canApplyFocusRequest(binding.recycler)) {
+            pendingFocusFirstItemFromTabSwitch = false
+            focusBookmark.finishFocusRequest()
+            return false
+        }
         if (focused != null && focused != binding.recycler && FocusTreeUtils.isDescendantOf(focused, binding.recycler)) {
             pendingFocusFirstItemFromTabSwitch = false
+            focusBookmark.finishFocusRequest()
             return false
         }
 
@@ -159,18 +193,20 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
 
         val b = _binding ?: return false
         val recycler = b.recycler
-        val isUiAlive = { _binding === b && isResumed }
+        val isUiAlive = { _binding === b && isResumed && focusBookmark.canApplyFocusRequest(recycler) }
         recycler.postIfAlive(isAlive = isUiAlive) {
             val vh = recycler.findViewHolderForAdapterPosition(0)
             if (vh != null) {
                 vh.itemView.requestFocus()
                 pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
                 return@postIfAlive
             }
             recycler.scrollToPosition(0)
             recycler.postIfAlive(isAlive = isUiAlive) {
                 recycler.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() ?: recycler.requestFocus()
                 pendingFocusFirstItemFromTabSwitch = false
+                focusBookmark.finishFocusRequest()
             }
         }
         return true
@@ -190,15 +226,18 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
     }
 
     private fun resetAndLoad(fromUserRefresh: Boolean = false) {
+        loadJob?.cancel()
         if (fromUserRefresh) {
             pendingFocusFirstItemAfterRefresh = true
             pendingRestorePosition = null
             pendingFocusFirstItemFromTabSwitch = false
+            focusBookmark.finishFocusRequest()
         }
+        loadJob?.cancel()
+        refreshCheckpoint = paging.snapshot().takeIf { adapter.itemCount > 0 }
         paging.reset()
         dpadGridController?.clearPendingFocusAfterLoadMore()
         dpadGridController?.parkFocusForDataSetReset()
-        adapter.submit(emptyList())
         loadNextPage(isRefresh = true)
     }
 
@@ -208,6 +247,8 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
         if (adapter.itemCount <= 0) return false
         if (b.swipeRefresh.isRefreshing) return false
         if (paging.snapshot().isLoading) return false
+        loadJob?.cancel()
+        refreshCheckpoint = paging.snapshot().takeIf { adapter.itemCount > 0 }
         paging.reset()
         dpadGridController?.clearPendingFocusAfterLoadMore()
         loadNextPage(isRefresh = true)
@@ -220,18 +261,21 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
     )
 
     private fun loadNextPage(isRefresh: Boolean = false) {
+        if (gridLoadState?.hasFailure == true && !isRefresh) return
         val startSnap = paging.snapshot()
         if (startSnap.isLoading || startSnap.endReached) return
         val startGen = startSnap.generation
-        viewLifecycleOwner.lifecycleScope.launch {
+        val requestBinding = binding
+        val sessionRevision = BiliSession.state.value.revision
+        lastRequestWasRefresh = isRefresh
+        gridLoadState?.loading()
+        loadJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val result =
                     paging.loadNextPage(
                         isRefresh = isRefresh,
                         fetch = { page ->
-                            val nav = BiliApi.nav()
-                            val mid = nav.optJSONObject("data")?.optLong("mid") ?: 0L
-                            if (mid <= 0) error("invalid mid")
+                            val mid = BiliSession.requireMid()
 
                             val res = BiliApi.bangumiFollowList(vmid = mid, type = type, pn = page, ps = 15)
                             FetchedPage(items = res.items, pages = res.pages)
@@ -255,7 +299,10 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
                         },
                     )
 
+                if (_binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
                 val applied = result.appliedOrNull() ?: return@launch
+                if (isRefresh) refreshCheckpoint = null
+                gridLoadState?.content()
                 if (applied.isRefresh) {
                     adapter.submit(applied.items)
                 } else if (applied.items.isNotEmpty()) {
@@ -285,15 +332,25 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
                 restoreFocusIfNeeded()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
+                if (_binding !== requestBinding || sessionRevision != BiliSession.state.value.revision) return@launch
+                if (isRefresh) {
+                    refreshCheckpoint?.let { paging.restoreCursorAfterFailedRefresh(it, startGen) }
+                    refreshCheckpoint = null
+                }
+                pendingFocusFirstItemAfterRefresh = false
                 AppLog.e("MyBangumi", "load failed type=$type", t)
-                context?.let { AppToast.show(it, "加载失败，可查看 Logcat(标签 BLBL)") }
+                gridLoadState?.failure(t, sessionRevision)
             } finally {
-                if (paging.snapshot().generation == startGen) _binding?.swipeRefresh?.isRefreshing = false
+                if (paging.snapshot().generation == startGen && _binding === requestBinding) _binding?.swipeRefresh?.isRefreshing = false
             }
         }
     }
 
     private fun restoreFocusIfNeeded() {
+        val b = _binding ?: return
+        if (!isResumed) return
+        val focus = activity?.currentFocus
+        if (focus != null && !FocusTreeUtils.isDescendantOf(focus, b.root)) return
         val pos = pendingRestorePosition ?: return
         if (_binding == null) return
         if (pos < 0 || pos >= adapter.itemCount) return
@@ -307,7 +364,20 @@ class MyBangumiFollowFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHa
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        _binding?.let { focusBookmark.save(it.recycler, outState) }
+    }
+
     override fun onDestroyView() {
+        _binding?.let { focusBookmark.detach(it.recycler) }
+        loadJob?.cancel()
+        loadJob = null
+        gridLoadState?.release()
+        gridLoadState = null
+        paging.invalidatePendingLoads()
+        refreshCheckpoint?.let { paging.restoreCursorAfterFailedRefresh(it, paging.snapshot().generation) }
+        refreshCheckpoint = null
         initialLoadTriggered = false
         dpadGridController?.release()
         dpadGridController = null

@@ -20,7 +20,9 @@ class MyLoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding.btnLogin.setOnClickListener {
-            startActivity(Intent(requireContext(), QrLoginActivity::class.java))
+            val host = activity as? blbl.cat3399.ui.MainNavigationHost
+            if (host != null) host.openLoginForCurrentPage()
+            else startActivity(Intent(requireContext(), QrLoginActivity::class.java))
         }
     }
 
