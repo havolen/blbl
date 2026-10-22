@@ -38,7 +38,13 @@ data class MainTopNavSpec(
 object MainRootNavRegistry {
     private const val ROOT_TAG_PREFIX = "main_root_"
 
-    val accountItem = MainTopNavAdapter.NavItem(MainNavigationKeys.MY_ACCOUNT, "我的", R.drawable.ic_nav_my)
+    fun accountItem(avatarUrl: String? = null) =
+        MainTopNavAdapter.NavItem(
+            key = MainNavigationKeys.MY_ACCOUNT,
+            title = "我的",
+            iconRes = R.drawable.ic_nav_my,
+            avatarUrl = avatarUrl,
+        )
     val settingsItem = MainTopNavAdapter.NavItem(MainTopNavAdapter.KEY_SETTINGS, "设置", R.drawable.ic_nav_settings)
 
     private val specs: List<RootNavSpec> =
@@ -147,9 +153,13 @@ object MainRootNavRegistry {
             )
         }
 
-    fun topNavItems(context: Context, visibleKeys: Collection<String> = BiliClient.prefs.topNavigationVisibleKeys): List<MainTopNavAdapter.NavItem> {
+    fun topNavItems(
+        context: Context,
+        visibleKeys: Collection<String> = BiliClient.prefs.topNavigationVisibleKeys,
+        accountAvatarUrl: String? = null,
+    ): List<MainTopNavAdapter.NavItem> {
         val visible = visibleKeys.toSet()
-        return allTopNavItems(context).filter { it.key in visible } + listOf(accountItem, settingsItem)
+        return allTopNavItems(context).filter { it.key in visible } + listOf(accountItem(accountAvatarUrl), settingsItem)
     }
 
     fun isValidTopNavKey(key: String): Boolean = key in MainNavigationKeys.destinations

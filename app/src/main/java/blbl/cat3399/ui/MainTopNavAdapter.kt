@@ -7,6 +7,8 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import blbl.cat3399.core.navigation.MainNavigationKeys
 import blbl.cat3399.R
+import blbl.cat3399.core.image.ImageLoader
+import blbl.cat3399.core.image.ImageUrl
 import blbl.cat3399.core.ui.ThemeColor
 import blbl.cat3399.databinding.ItemTopNavigationBinding
 
@@ -18,6 +20,7 @@ class MainTopNavAdapter(
         val key: String,
         val title: String,
         val iconRes: Int,
+        val avatarUrl: String? = null,
     )
 
     private val items = ArrayList<NavItem>()
@@ -90,6 +93,15 @@ class MainTopNavAdapter(
 
     fun itemAt(position: Int): NavItem? = items.getOrNull(position)
 
+    fun updateAccountAvatar(avatarUrl: String?) {
+        val position = positionOf(MainNavigationKeys.MY_ACCOUNT)
+        if (position < 0) return
+        val item = items[position]
+        if (item.avatarUrl == avatarUrl) return
+        items[position] = item.copy(avatarUrl = avatarUrl)
+        notifyItemChanged(position)
+    }
+
     fun matches(list: List<NavItem>, selectedKey: String): Boolean = items == list && this.selectedKey == selectedKey
 
     override fun getItemId(position: Int): Long = items[position].key.hashCode().toLong()
@@ -131,6 +143,8 @@ class MainTopNavAdapter(
     override fun getItemCount(): Int = items.size
 
     class Vh(private val binding: ItemTopNavigationBinding) : RecyclerView.ViewHolder(binding.root) {
+        private var hasAvatar = false
+
         fun bind(
             item: NavItem,
             selected: Boolean,
@@ -138,10 +152,10 @@ class MainTopNavAdapter(
             onFocus: () -> Unit,
             onFocusChanged: (Boolean) -> Unit,
         ) {
-            bindCard(binding, item, selected, onClick, onFocus, onFocusChanged)
+            hasAvatar = bindCard(binding, item, selected, onClick, onFocus, onFocusChanged)
         }
 
-        fun setActive(active: Boolean) = renderCardState(binding, active)
+        fun setActive(active: Boolean) = renderCardState(binding, active, hasAvatar)
     }
 
     companion object {
@@ -171,10 +185,19 @@ class MainTopNavAdapter(
             onClick: () -> Unit,
             onFocus: () -> Unit,
             onFocusChanged: ((Boolean) -> Unit)? = null,
-        ) {
+        ): Boolean {
+            val hasAvatar = item.key == MainNavigationKeys.MY_ACCOUNT && !item.avatarUrl.isNullOrBlank()
             binding.tvLabel.text = item.title
             binding.ivIcon.visibility = View.VISIBLE
-            binding.ivIcon.setImageResource(item.iconRes)
+            if (hasAvatar) {
+                binding.ivIcon.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+                binding.ivIcon.imageTintList = null
+                ImageLoader.loadInto(binding.ivIcon, ImageUrl.avatar(item.avatarUrl))
+            } else {
+                ImageLoader.loadInto(binding.ivIcon, null)
+                binding.ivIcon.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                binding.ivIcon.setImageResource(item.iconRes)
+            }
             binding.ivIcon.translationY = binding.root.resources.displayMetrics.density * when (item.key) {
                 KEY_SEARCH, KEY_RECOMMEND, KEY_POPULAR, KEY_CATEGORY -> LOWER_ICON_OFFSET_DP
                 KEY_LIVE -> RAISED_ICON_OFFSET_DP
@@ -186,21 +209,22 @@ class MainTopNavAdapter(
             }
             binding.card.isSelected = selected
             binding.card.setOnClickListener { onClick() }
-            renderCardState(binding, binding.card.hasFocus() || selected)
+            renderCardState(binding, binding.card.hasFocus() || selected, hasAvatar)
             binding.card.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) {
-                    renderCardState(binding, true)
+                    renderCardState(binding, true, hasAvatar)
                     onFocusChanged?.invoke(true)
                     onFocus()
                 } else if (onFocusChanged == null) {
-                    renderCardState(binding, selected)
+                    renderCardState(binding, selected, hasAvatar)
                 } else {
                     onFocusChanged(false)
                 }
             }
+            return hasAvatar
         }
 
-        private fun renderCardState(binding: ItemTopNavigationBinding, active: Boolean) {
+        private fun renderCardState(binding: ItemTopNavigationBinding, active: Boolean, hasAvatar: Boolean = false) {
             val context = binding.root.context
             val textColor = if (active) {
                 ThemeColor.resolve(context, R.attr.blblNavigationFocusText, R.color.blbl_glass_focus_text)
@@ -221,7 +245,7 @@ class MainTopNavAdapter(
             binding.card.setCardBackgroundColor(background)
             binding.card.strokeColor = stroke
             binding.tvLabel.setTextColor(textColor)
-            binding.ivIcon.imageTintList = ColorStateList.valueOf(textColor)
+            binding.ivIcon.imageTintList = if (hasAvatar) null else ColorStateList.valueOf(textColor)
         }
     }
 }

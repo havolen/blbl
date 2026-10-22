@@ -160,11 +160,12 @@
         <item name="tabBackground">@drawable/blbl_section_tab_background</item>
         <item name="tabTextColor">@color/blbl_section_tab_text</item>
         <item name="android:minHeight">48dp</item>
-        <item name="tabPaddingStart">14dp</item>
-        <item name="tabPaddingEnd">14dp</item>
+        <item name="tabPaddingStart">16dp</item>
+        <item name="tabPaddingEnd">16dp</item>
         <item name="tabPaddingTop">0dp</item>
         <item name="tabPaddingBottom">0dp</item>
-        <item name="tabRippleColor">?attr/blblAccentWeak</item>
+        <item name="tabRippleColor">@android:color/transparent</item>
+        <item name="tabGravity">start</item>
     </style>
 
     <!-- Player OSD sizing overlay: baseline values (scaled at runtime by userScale + autoScale). -->
@@ -189,5 +190,39 @@
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
         <item name="android:stateListAnimator">@animator/blbl_focus_scale</item>
+    </style>
+
+    <!-- My-page shortcuts: same pill shape, icon+label typography and focus colors as the sidebar. -->
+    <style name="Widget.Blbl.MyActionButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_margin">6dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:paddingVertical">0dp</item>
+        <item name="android:gravity">start|center_vertical</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textColor">@color/blbl_my_action_content</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:stateListAnimator">@animator/blbl_focus_scale</item>
+        <item name="backgroundTint">@color/blbl_my_action_bg</item>
+        <item name="cornerRadius">16dp</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="strokeColor">?attr/blblFocusStrokeFocusOnlyColor</item>
+        <item name="rippleColor">?attr/blblAccentWeak</item>
+        <item name="iconSize">22dp</item>
+        <item name="iconGravity">start</item>
+        <item name="iconPadding">12dp</item>
+        <item name="iconTint">@color/blbl_my_action_content</item>
     </style>
 </resources>

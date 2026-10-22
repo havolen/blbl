@@ -3,7 +3,6 @@
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <solid android:color="?attr/blblNavigationFocusBackground" />
-            <stroke android:width="2dp" android:color="?attr/blblAccent" />
             <corners android:radius="24dp" />
         </shape>
     </item>

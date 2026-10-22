@@ -51,6 +51,16 @@ class UserInfoDialogFragment : DialogFragment() {
         binding.btnFollower.setOnClickListener {
             AppToast.show(requireContext(), "粉丝列表未实现")
         }
+        binding.btnFollowing.setOnFocusChangeListener { _, focused ->
+            binding.btnFollowing.isSelected = focused
+            binding.tvFollowing.isSelected = focused
+            binding.tvFollowingLabel.isSelected = focused
+        }
+        binding.btnFollower.setOnFocusChangeListener { _, focused ->
+            binding.btnFollower.isSelected = focused
+            binding.tvFollower.isSelected = focused
+            binding.tvFollowerLabel.isSelected = focused
+        }
 
         binding.tvName.text = ""
         binding.tvMid.text = ""

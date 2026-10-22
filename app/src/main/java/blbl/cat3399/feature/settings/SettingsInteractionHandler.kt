@@ -1671,7 +1671,6 @@ class SettingsInteractionHandler(
             items = labels,
             checked = checked,
             minCheckedCount = 1,
-            showStatusText = focusId == SettingId.TopNavigationItems,
             onChanged = { finalChecked ->
                 save(
                     keys.filterIndexed { idx, _ ->

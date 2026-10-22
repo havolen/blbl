@@ -17,7 +17,7 @@
         android:padding="@dimen/sidebar_settings_padding"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_back"
-        app:tint="?attr/blblOnPageBackdrop"
+        android:tint="@color/blbl_settings_back_tint"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

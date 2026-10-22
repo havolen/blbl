@@ -26,6 +26,7 @@ import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
 import blbl.cat3399.BuildConfig
 import blbl.cat3399.R
+import blbl.cat3399.core.account.AccountAvatar
 import blbl.cat3399.core.account.AccountSessionStore
 import blbl.cat3399.core.account.BiliSession
 import blbl.cat3399.core.api.BiliApi
@@ -69,6 +70,7 @@ class MainActivity : BaseActivity(), MainNavigationHost {
     private var suppressNextTopNavigationFocusFollow = false
     private var renderedVisibleKeys: List<String>? = null
     private var renderedSelectedKey: String? = null
+    private var renderedAccountAvatarUrl: String? = null
     private val navigationHandler = Handler(Looper.getMainLooper())
     private var sidebarExpanded = false
     private var sidebarAutoCollapse: Runnable? = null
@@ -205,6 +207,7 @@ class MainActivity : BaseActivity(), MainNavigationHost {
                             }
                         }
                     }
+                    configureTopNavigationItems(currentTopNavKey)
                     observedSessionRevision = session.revision
                 }
             }
@@ -516,6 +519,52 @@ class MainActivity : BaseActivity(), MainNavigationHost {
 
         applySelectedPageToRoot(selectedKey, desiredNavId)
         binding.mainContainer.post { applySelectedPageToRoot(selectedKey, desiredNavId) }
+        scheduleSectionTabRowLayout()
+    }
+
+    override fun onSectionTabVisibilityChanged() {
+        scheduleSectionTabRowLayout()
+    }
+
+    /**
+     * Category and Live keep their section tabs in the same row as the collapsed navigation
+     * capsule: the content moves up by one capsule row and the tab strip starts to its right.
+     */
+    private fun scheduleSectionTabRowLayout() {
+        if (isDestroyed) return
+        binding.mainContainer.post { applySectionTabRowLayout() }
+        binding.mainContainer.doOnPreDraw { applySectionTabRowLayout() }
+    }
+
+    private fun applySectionTabRowLayout() {
+        if (isDestroyed || binding.mainContainer.width == 0) return
+        val root = currentRootFragment()
+        val tabLayout = root?.view?.findViewById<View>(R.id.tab_layout)
+        val hasTopTabs = root is PageSectionFocusHost && tabLayout?.isShown == true
+
+        val containerLp = binding.mainContainer.layoutParams as? MarginLayoutParams
+        if (containerLp != null) {
+            val desiredTop = if (hasTopTabs) dp(16f) else resources.getDimensionPixelSize(R.dimen.main_content_top_inset)
+            if (containerLp.topMargin != desiredTop) {
+                containerLp.topMargin = desiredTop
+                binding.mainContainer.layoutParams = containerLp
+            }
+        }
+
+        if (tabLayout == null) return
+        val capsule = binding.btnCollapsedNavigation.root
+        if (hasTopTabs && capsule.width == 0) {
+            // Capsule not measured yet; retry on the next frame.
+            binding.mainContainer.post { applySectionTabRowLayout() }
+            return
+        }
+        // Capsule starts at 20dp; leave a 16dp gap before the first tab.
+        val startMargin = if (hasTopTabs) capsule.width + dp(36f) else 0
+        val tabLp = tabLayout.layoutParams as? MarginLayoutParams
+        if (tabLp != null && tabLp.marginStart != startMargin) {
+            tabLp.marginStart = startMargin
+            tabLayout.layoutParams = tabLp
+        }
     }
 
     private fun applySelectedPageToRoot(key: String, expectedRootId: Int) {
@@ -531,18 +580,22 @@ class MainActivity : BaseActivity(), MainNavigationHost {
 
     private fun configureTopNavigationItems(selectedKey: String) {
         val visibleKeys = BiliClient.prefs.topNavigationVisibleKeys
+        val accountAvatarUrl = AccountAvatar.resolve()
         val visibilityChanged = renderedVisibleKeys != visibleKeys
-        val items = MainRootNavRegistry.topNavItems(this, visibleKeys)
+        val avatarChanged = renderedAccountAvatarUrl != accountAvatarUrl
+        val items = MainRootNavRegistry.topNavItems(this, visibleKeys, accountAvatarUrl)
         if (visibilityChanged) {
             navAdapter.submit(items, selectedKey)
             renderedVisibleKeys = visibleKeys
         } else {
             navAdapter.setSelectedKey(selectedKey)
+            if (avatarChanged) navAdapter.updateAccountAvatar(accountAvatarUrl)
         }
-        if (visibilityChanged || renderedSelectedKey != selectedKey) {
+        renderedAccountAvatarUrl = accountAvatarUrl
+        if (visibilityChanged || avatarChanged || renderedSelectedKey != selectedKey) {
             val selectedItem = items.firstOrNull { it.key == selectedKey }
                 ?: MainRootNavRegistry.allTopNavItems(this).firstOrNull { it.key == selectedKey }
-                ?: MainRootNavRegistry.accountItem
+                ?: MainRootNavRegistry.accountItem(accountAvatarUrl)
             MainTopNavAdapter.bindCard(binding.btnCollapsedNavigation, selectedItem, true,
                 onClick = { expandSidebar(focusSelected = true) }, onFocus = {})
             renderedSelectedKey = selectedKey
@@ -737,15 +790,26 @@ class MainActivity : BaseActivity(), MainNavigationHost {
         userInfoOverlay.btnAddAccount.setOnClickListener { openQrLogin() }
         userInfoOverlay.btnLogout.setOnClickListener { showLogoutConfirm() }
 
-        val invalidateOverlay = View.OnFocusChangeListener { _, _ ->
+        val updateOverlayFocus = View.OnFocusChangeListener { focusedView, hasFocus ->
+            focusedView.isSelected = hasFocus
+            when (focusedView.id) {
+                R.id.btn_following -> {
+                    userInfoOverlay.tvFollowing.isSelected = hasFocus
+                    userInfoOverlay.tvFollowingLabel.isSelected = hasFocus
+                }
+                R.id.btn_follower -> {
+                    userInfoOverlay.tvFollower.isSelected = hasFocus
+                    userInfoOverlay.tvFollowerLabel.isSelected = hasFocus
+                }
+            }
             userInfoOverlay.card.invalidate()
             userInfoOverlay.root.invalidate()
         }
-        userInfoOverlay.btnFollowing.onFocusChangeListener = invalidateOverlay
-        userInfoOverlay.btnFollower.onFocusChangeListener = invalidateOverlay
-        userInfoOverlay.btnSwitchAccount.onFocusChangeListener = invalidateOverlay
-        userInfoOverlay.btnAddAccount.onFocusChangeListener = invalidateOverlay
-        userInfoOverlay.btnLogout.onFocusChangeListener = invalidateOverlay
+        userInfoOverlay.btnFollowing.onFocusChangeListener = updateOverlayFocus
+        userInfoOverlay.btnFollower.onFocusChangeListener = updateOverlayFocus
+        userInfoOverlay.btnSwitchAccount.onFocusChangeListener = updateOverlayFocus
+        userInfoOverlay.btnAddAccount.onFocusChangeListener = updateOverlayFocus
+        userInfoOverlay.btnLogout.onFocusChangeListener = updateOverlayFocus
     }
 
     private fun isUserInfoOverlayVisible(): Boolean = userInfoOverlay.root.visibility == View.VISIBLE
@@ -1055,6 +1119,7 @@ class MainActivity : BaseActivity(), MainNavigationHost {
         applySelectedPageToRoot(key, targetNavId)
         binding.mainContainer.post {
             applySelectedPageToRoot(key, targetNavId)
+            applySectionTabRowLayout()
             updateSidebarBackdropAfterPageChange()
         }
         AppLog.d("Nav", "selected key=$key dispatchMs=${SystemClock.uptimeMillis() - startedAt}")

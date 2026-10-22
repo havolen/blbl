@@ -20,4 +20,7 @@ interface MainNavigationHost {
 
     /** Move focus to the previous or next visible top-level navigation entry. */
     fun requestFocusTopNavigationAdjacent(direction: Int): Boolean
+
+    /** Page-local section tabs were shown or hidden; realign the collapsed navigation capsule. */
+    fun onSectionTabVisibilityChanged() {}
 }

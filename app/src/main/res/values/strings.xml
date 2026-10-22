@@ -23,6 +23,14 @@
     <string name="my_tab_drama">追剧</string>
     <string name="my_tab_toview">稍后再看</string>
     <string name="my_tab_like">最近点赞</string>
+    <string name="my_account_title">我的账号</string>
+    <string name="my_account_signed_out_title">尚未登录</string>
+    <string name="my_account_signin_hint">登录后查看个人内容</string>
+    <string name="my_account_state_unverified">账号状态暂时无法验证</string>
+    <string name="my_account_logged_in">已登录</string>
+    <string name="action_manage_account">账号管理</string>
+    <string name="action_scan_login">扫码登录</string>
+    <string name="account_avatar">账号头像</string>
 
     <string name="my_need_login">该页面需要登录</string>
     <string name="my_qr_login">二维码登录</string>

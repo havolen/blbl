@@ -101,6 +101,7 @@ class LiveFragment : Fragment(), PageSectionFocusHost, LiveGridTabSwitchFocusHos
         b.detailContainer.visibility = if (showDetail) View.VISIBLE else View.GONE
         b.tabLayout.visibility = if (showDetail) View.GONE else View.VISIBLE
         b.viewPager.visibility = if (showDetail) View.GONE else View.VISIBLE
+        (activity as? blbl.cat3399.ui.MainNavigationHost)?.onSectionTabVisibilityChanged()
         return showDetail
     }
 
@@ -155,7 +156,10 @@ class LiveFragment : Fragment(), PageSectionFocusHost, LiveGridTabSwitchFocusHos
 
         val tabLayout = b.tabLayout
         tabLayout.postIfAlive(isAlive = { _binding === b }) {
-            tabLayout.enableDpadTabFocus(selectOnFocusProvider = { BiliClient.prefs.tabSwitchFollowsFocus }) { position ->
+            tabLayout.enableDpadTabFocus(
+                selectOnFocusProvider = { BiliClient.prefs.tabSwitchFollowsFocus },
+                disableDefaultFocusHighlight = true,
+            ) { position ->
                 val tab = tabs.getOrNull(position)
                 AppLog.d("Live", "tab focus pos=$position key=${tab?.key} title=${tab?.title} t=${SystemClock.uptimeMillis()}")
             }

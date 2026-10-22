@@ -113,7 +113,10 @@ class CategoryFragment : Fragment(), PageSectionFocusHost, VideoGridTabSwitchFoc
     private fun installTabFocusHandlers(b: FragmentCategoryBinding) {
         val tabLayout = b.tabLayout
         tabLayout.postIfAlive(isAlive = { _binding === b }) {
-            tabLayout.enableDpadTabFocus(selectOnFocusProvider = { BiliClient.prefs.tabSwitchFollowsFocus }) { position ->
+            tabLayout.enableDpadTabFocus(
+                selectOnFocusProvider = { BiliClient.prefs.tabSwitchFollowsFocus },
+                disableDefaultFocusHighlight = true,
+            ) { position ->
                 val zone = zones.getOrNull(position)
                 AppLog.d(
                     "Category",

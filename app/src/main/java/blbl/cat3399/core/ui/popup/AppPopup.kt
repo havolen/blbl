@@ -12,6 +12,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -240,7 +241,6 @@ object AppPopup {
         checked: BooleanArray,
         cancelable: Boolean = true,
         minCheckedCount: Int = 0,
-        showStatusText: Boolean = false,
         onChanged: (checked: BooleanArray) -> Unit,
         onMinCheckedRejected: (() -> Unit)? = null,
         onDismiss: (() -> Unit)? = null,
@@ -287,7 +287,6 @@ object AppPopup {
                     items = items,
                     checked = state,
                     minCheckedCount = minCheckedCount.coerceAtLeast(0),
-                    showStatusText = showStatusText,
                     onChanged = { onChanged(state.copyOf()) },
                     onMinCheckedRejected = onMinCheckedRejected,
                 )
@@ -573,9 +572,11 @@ object AppPopup {
         class Vh(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val tvLabel: TextView = itemView.findViewById(R.id.tv_label)
             private val tvCheck: TextView = itemView.findViewById(R.id.tv_check)
+            private val ivCheckbox: ImageView = itemView.findViewById(R.id.iv_checkbox)
 
             fun bind(label: String, checked: Boolean, position: Int, itemCount: Int, onClick: () -> Unit) {
                 tvLabel.text = label
+                ivCheckbox.visibility = View.GONE
                 tvCheck.visibility = if (checked) View.VISIBLE else View.GONE
                 itemView.setOnClickListener { onClick() }
                 itemView.setOnKeyListener { _, keyCode, event ->
@@ -608,7 +609,6 @@ object AppPopup {
         private val items: List<String>,
         private val checked: BooleanArray,
         private val minCheckedCount: Int,
-        private val showStatusText: Boolean,
         private val onChanged: (() -> Unit)?,
         private val onMinCheckedRejected: (() -> Unit)?,
     ) : RecyclerView.Adapter<MultiChoiceAdapter.Vh>() {
@@ -622,7 +622,6 @@ object AppPopup {
             holder.bind(
                 label = label,
                 checked = checked.getOrNull(position) == true,
-                showStatusText = showStatusText,
                 position = position,
                 itemCount = items.size,
                 onToggle = {
@@ -645,11 +644,16 @@ object AppPopup {
         class Vh(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val tvLabel: TextView = itemView.findViewById(R.id.tv_label)
             private val tvCheck: TextView = itemView.findViewById(R.id.tv_check)
+            private val ivCheckbox: ImageView = itemView.findViewById(R.id.iv_checkbox)
 
-            fun bind(label: String, checked: Boolean, showStatusText: Boolean, position: Int, itemCount: Int, onToggle: () -> Unit) {
+            fun bind(label: String, checked: Boolean, position: Int, itemCount: Int, onToggle: () -> Unit) {
                 tvLabel.text = label
-                tvCheck.text = if (showStatusText) if (checked) "显示" else "隐藏" else "✓"
-                tvCheck.visibility = if (showStatusText || checked) View.VISIBLE else View.GONE
+                tvCheck.visibility = View.GONE
+                ivCheckbox.visibility = View.VISIBLE
+                ivCheckbox.setImageResource(
+                    if (checked) R.drawable.ic_checkbox_checked else R.drawable.ic_checkbox_unchecked,
+                )
+                itemView.isSelected = checked
                 itemView.setOnClickListener { onToggle() }
                 itemView.setOnKeyListener { _, keyCode, event ->
                     when (keyCode) {

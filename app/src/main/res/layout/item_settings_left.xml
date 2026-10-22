@@ -12,15 +12,18 @@
     app:cardCornerRadius="14dp"
     app:cardElevation="0dp"
     app:strokeColor="?attr/blblFocusStrokeFocusOnlyColor"
-    app:strokeWidth="2dp">
+    app:strokeWidth="0dp">
 
     <TextView
         android:id="@+id/tv_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:minHeight="64dp"
         android:gravity="center"
-        android:padding="18dp"
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="16dp"
         android:textAlignment="center"
-        android:textColor="?attr/blblOnPageBackdrop"
-        android:textSize="18sp" />
+        android:textColor="@color/blbl_settings_left_text"
+        android:textSize="18sp"
+        android:fontFamily="sans-serif-medium" />
 </com.google.android.material.card.MaterialCardView>

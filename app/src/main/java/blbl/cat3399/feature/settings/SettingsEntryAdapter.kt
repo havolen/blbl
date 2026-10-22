@@ -57,6 +57,8 @@ class SettingsEntryAdapter(
 
     class Vh(private val binding: ItemSettingEntryBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: SettingEntry, onClick: (SettingEntry) -> Unit) {
+            binding.root.setOnFocusChangeListener { _, focused -> updateFocusState(focused) }
+            updateFocusState(binding.root.hasFocus())
             binding.root.tag = item.id
             binding.tvTitle.text = item.title
             if (item.value.isBlank()) {
@@ -73,6 +75,13 @@ class SettingsEntryAdapter(
                 binding.tvDesc.text = item.desc
             }
             binding.root.setOnClickListener { onClick(item) }
+        }
+
+        private fun updateFocusState(focused: Boolean) {
+            binding.root.isSelected = focused
+            binding.tvTitle.isSelected = focused
+            binding.tvValue.isSelected = focused
+            binding.tvDesc.isSelected = focused
         }
     }
 }

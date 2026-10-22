@@ -9,15 +9,18 @@
     android:background="@drawable/bg_setting_entry"
     android:clickable="true"
     android:focusable="true"
-    android:padding="18dp"
+    android:minHeight="64dp"
+    android:paddingHorizontal="20dp"
+    android:paddingVertical="16dp"
     android:stateListAnimator="@animator/blbl_focus_scale">
 
     <TextView
         android:id="@+id/tv_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textColor="?attr/colorOnSurface"
+        android:textColor="@color/blbl_settings_entry_primary"
         android:textSize="18sp"
+        android:fontFamily="sans-serif-medium"
         app:layout_constraintEnd_toStartOf="@id/tv_value"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -26,7 +29,7 @@
         android:id="@+id/tv_value"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="?android:attr/textColorSecondary"
+        android:textColor="@color/blbl_settings_entry_secondary"
         android:textSize="16sp"
         app:layout_constraintBaseline_toBaselineOf="@id/tv_title"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -36,7 +39,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:textColor="?android:attr/textColorSecondary"
+        android:textColor="@color/blbl_settings_entry_secondary"
         android:textSize="14sp"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"

@@ -29,12 +29,14 @@
             android:orientation="horizontal"
             android:paddingHorizontal="16dp">
 
-            <ImageView
+            <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/iv_icon"
                 android:layout_width="@dimen/top_nav_icon_size"
                 android:layout_height="@dimen/top_nav_icon_size"
                 android:contentDescription="@null"
-                android:visibility="gone" />
+                android:scaleType="fitCenter"
+                android:visibility="gone"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay_Blbl_Circular" />
 
             <TextView
                 android:id="@+id/tv_label"

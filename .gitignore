@@ -25,3 +25,7 @@ local-notes/
 .workbuddy/
 nodeseek_vps_deals_*
 ~$*
+
+# DeepSeek Harness local build cache and machine-specific overlay
+.gradle-dsh/
+AGENTS.local.md

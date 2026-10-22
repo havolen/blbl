@@ -1,0 +1,29 @@
+# AGENTS.local.md — 本机覆盖模板（gitignored）
+
+> 复制为 `AGENTS.local.md` 后按本机实际情况修改；DSH 会自动加载。
+> 本文件只放机器相关事实，不放 token、密码、签名或密钥。
+
+## 设备
+
+- 首选 TV 模拟器 serial：`emulator-5554`
+- AVD：`Your_TV_AVD_Name`
+- AVD 配置：`~/.android/avd/Your_TV_AVD_Name.avd/config.ini`
+- 模拟器系统：Android 9 / API 28 / x86 / 2GB RAM / 1080p 320dpi
+- 模拟器限制：x86 不能加载 armeabi-v7a native so；播放、DRM、4K 必须回真机
+- 真机：`<ip>:5555`（Android 版本 / ABI / RAM / 面板）
+- 非目标设备：`<phone-serial>`，不要安装/测试
+
+## 工具链
+
+- JDK 17：`/absolute/path/to/jdk-17/Contents/Home`
+- Android SDK：`/absolute/path/to/AndroidSDK`
+- adb：`/absolute/path/to/AndroidSDK/platform-tools/adb`
+- emulator：`/absolute/path/to/AndroidSDK/emulator/emulator`
+- 本机 PATH 里的 `java` 若不是 17，不要使用
+
+## 验证
+
+- 默认产物：`build/dsh-tv-verify/<timestamp>-<pid>/`
+- 模拟器启动/渲染较慢；启动超时可用 `TV_LAUNCH_TIMEOUT=180`
+- 本机 HVF 可能初始化失败；若报 `HVF error`，改用 `-accel off`（约 6 分钟开机）
+- 当前工作区可能存在用户未提交改动；开工先 `git status --short`

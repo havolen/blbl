@@ -1,6 +1,7 @@
 package blbl.cat3399.core.ui
 
 import android.animation.AnimatorInflater
+import android.os.Build
 import android.view.ViewGroup
 import blbl.cat3399.R
 import com.google.android.material.tabs.TabLayout
@@ -14,6 +15,7 @@ fun TabLayout.enableDpadTabFocus(
 
 fun TabLayout.enableDpadTabFocus(
     selectOnFocusProvider: () -> Boolean,
+    disableDefaultFocusHighlight: Boolean = false,
     onTabFocused: ((position: Int) -> Unit)? = null,
 ) {
     val tabStrip = getChildAt(0) as? ViewGroup ?: return
@@ -22,6 +24,10 @@ fun TabLayout.enableDpadTabFocus(
         val tabView = tabStrip.getChildAt(i)
         tabView.isFocusable = true
         tabView.isClickable = true
+        if (disableDefaultFocusHighlight && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // The platform focus highlight would draw a grey rectangle behind the pill background.
+            tabView.defaultFocusHighlightEnabled = false
+        }
         tabView.stateListAnimator = AnimatorInflater.loadStateListAnimator(context, R.animator.blbl_focus_scale)
         tabView.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) return@setOnFocusChangeListener
