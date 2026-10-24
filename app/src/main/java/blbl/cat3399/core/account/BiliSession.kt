@@ -22,6 +22,8 @@ object BiliSession {
         val mid: Long? = null,
         val name: String? = null,
         val avatarUrl: String? = null,
+        /** null = the website did not return a verifiable membership state. */
+        val vip: Boolean? = null,
     ) {
         val canAccessPersonal: Boolean get() = status != Status.SignedOut
     }
@@ -51,6 +53,7 @@ object BiliSession {
                 mid = mid?.toLongOrNull(),
                 name = saved?.name,
                 avatarUrl = saved?.avatarUrl,
+                vip = null,
             )
             AppLog.i("Session", "credentials changed revision=${mutableState.value.revision} present=${token != null}")
         }
@@ -86,6 +89,14 @@ object BiliSession {
         fetchVerifiedNav()
     }
 
+    private fun parseVip(data: JSONObject): Boolean? {
+        if (data.has("vipStatus")) return data.optInt("vipStatus", 0) > 0
+        val vip = data.optJSONObject("vip") ?: return null
+        if (vip.has("status")) return vip.optInt("status", 0) > 0
+        if (vip.has("type")) return vip.optInt("type", 0) > 0
+        return null
+    }
+
     private suspend fun fetchVerifiedNav(): JSONObject {
         val before = state.value
         if (!BiliClient.cookies.hasSessData()) throw BiliApiException(-101, "请登录")
@@ -104,9 +115,16 @@ object BiliSession {
             val mid = data.optLong("mid")
             val name = data.optString("uname").takeIf { it.isNotBlank() }
             val avatar = data.optString("face").takeIf { it.isNotBlank() }
+            val vip = parseVip(data)
             synchronized(this) {
                 if (state.value.revision != before.revision) throw CancellationException("Account changed")
-                mutableState.value = before.copy(status = Status.Authenticated, mid = mid, name = name, avatarUrl = avatar)
+                mutableState.value = before.copy(
+                    status = Status.Authenticated,
+                    mid = mid,
+                    name = name,
+                    avatarUrl = avatar,
+                    vip = vip,
+                )
             }
             BiliClient.accounts.saveCurrentSessionAsActive(BiliClient.prefs, BiliClient.cookies, name, avatar, mid)
             lastCheckedAtMs = System.currentTimeMillis()

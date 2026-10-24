@@ -15,6 +15,7 @@ class MangoLoginApi(cookies: CookieStore) {
     data class UserProfile(
         val username: String,
         val uid: String?,
+        val vip: Boolean? = null,
     )
 
     sealed interface PollResult {
@@ -55,6 +56,36 @@ class MangoLoginApi(cookies: CookieStore) {
         "invoker" to "pcweb",
     )
 
+    private fun parseVip(source: JSONObject): Boolean? {
+        val info = source.optJSONObject("vipinfo") ?: source.optJSONObject("vipInfo") ?: source.optJSONObject("vip")
+        if (info != null) {
+            sequenceOf("type", "vipType", "vip_type", "level").forEach { key ->
+                val value = info.opt(key)
+                if (value != null) {
+                    val number = when (value) {
+                        is Number -> value.toInt()
+                        is String -> value.toIntOrNull()
+                        else -> null
+                    }
+                    if (number != null) return number > 0
+                }
+            }
+            if (info.has("status")) return info.optInt("status", 0) == 1
+            if (info.has("isValidVip")) return info.optBoolean("isValidVip", false)
+        }
+        sequenceOf("isVip", "is_vip", "vipStatus", "vip_status").forEach { key ->
+            if (source.has(key)) {
+                return when (val value = source.opt(key)) {
+                    is Boolean -> value
+                    is Number -> value.toInt() > 0
+                    is String -> value == "1" || value.equals("true", ignoreCase = true)
+                    else -> null
+                }
+            }
+        }
+        return null
+    }
+
     private fun ensureSuccess(json: JSONObject) {
         val code = json.optInt("code", -1)
         if (code != CODE_SUCCESS) throw IOException("芒果二维码申请失败 ($code)")
@@ -72,7 +103,7 @@ class MangoLoginApi(cookies: CookieStore) {
         val uid = sequenceOf("uid", "userId", "user_id", "id")
             .map { user.optString(it, "").trim() }
             .firstOrNull { it.isNotBlank() && it != "0" }
-        return UserProfile(username, uid)
+        return UserProfile(username, uid, parseVip(user) ?: parseVip(data))
     }
 
     private companion object {

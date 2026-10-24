@@ -17,144 +17,421 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:clipChildren="false">
+
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btn_account"
+                android:id="@+id/account_table"
                 android:layout_width="match_parent"
-                android:layout_height="96dp"
+                android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:stateListAnimator="@animator/blbl_focus_scale"
-                app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                app:cardBackgroundColor="?attr/colorSurface"
                 app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:rippleColor="?attr/blblAccentWeak"
-                app:strokeColor="?attr/blblFocusStrokeFocusOnlyColor"
-                app:strokeWidth="0dp">
+                app:cardElevation="0dp">
+
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="16dp">
-                    <com.google.android.material.imageview.ShapeableImageView
-                        android:id="@+id/avatar"
-                        android:layout_width="64dp"
-                        android:layout_height="64dp"
-                        android:src="@drawable/ic_nav_my"
-                        android:scaleType="centerCrop"
-                        android:contentDescription="@string/account_avatar"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay_Blbl_Circular" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingVertical="10dp">
+
+                    <!-- 哔哩哔哩 -->
                     <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="16dp"
-                        android:orientation="vertical">
+                        android:layout_width="match_parent"
+                        android:layout_height="92dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="20dp">
                         <TextView
-                            android:id="@+id/account_name"
-                            android:layout_width="match_parent"
+                            android:layout_width="184dp"
                             android:layout_height="wrap_content"
-                            android:ellipsize="end"
-                            android:maxLines="1"
-                            android:text="@string/my_account_title"
-                            android:textColor="@color/blbl_my_account_primary"
+                            android:text="@string/platform_bilibili"
+                            android:textColor="?attr/blblOnPageBackdrop"
                             android:textSize="20sp"
                             android:fontFamily="sans-serif-medium" />
-                        <TextView
-                            android:id="@+id/account_status"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:ellipsize="end"
-                            android:maxLines="1"
-                            android:textColor="@color/blbl_my_action_content"
-                            android:textSize="14sp" />
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/account_bilibili"
+                            android:layout_width="0dp"
+                            android:layout_height="68dp"
+                            android:layout_weight="1"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusDown="@id/account_iqiyi"
+                            android:nextFocusRight="@id/remove_bilibili"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="12dp">
+                                <FrameLayout
+                                    android:layout_width="52dp"
+                                    android:layout_height="52dp">
+                                    <com.google.android.material.imageview.ShapeableImageView
+                                        android:id="@+id/logo_bilibili"
+                                        android:layout_width="52dp"
+                                        android:layout_height="52dp"
+                                        android:scaleType="centerCrop"
+                                        android:src="@drawable/ic_platform_bilibili"
+                                        android:contentDescription="@string/platform_bilibili"
+                                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay_Blbl_Circular" />
+                                    <ImageView
+                                        android:id="@+id/vip_bilibili"
+                                        android:layout_width="20dp"
+                                        android:layout_height="20dp"
+                                        android:layout_gravity="bottom|end"
+                                        android:src="@drawable/ic_vip_badge"
+                                        android:contentDescription="@string/vip_badge_description"
+                                        android:visibility="gone" />
+                                </FrameLayout>
+                                <TextView
+                                    android:id="@+id/name_bilibili"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="14dp"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/mango_account_logged_out"
+                                    android:textColor="@color/blbl_my_account_primary"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-medium" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/remove_bilibili"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="12dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusLeft="@id/account_bilibili"
+                            android:nextFocusDown="@id/remove_iqiyi"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <ImageView
+                                android:id="@+id/remove_bilibili_icon"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_platform_remove"
+                                android:tint="?attr/blblDanger"
+                                android:contentDescription="@string/account_logout_action" />
+                        </com.google.android.material.card.MaterialCardView>
                     </LinearLayout>
-                    <TextView
-                        android:id="@+id/account_action"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:text="@string/action_manage_account"
-                        android:textColor="@color/blbl_my_action_content"
-                        android:textSize="16sp"
-                        android:fontFamily="sans-serif-medium" />
-                    <ImageView
-                        android:id="@+id/account_arrow"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_marginStart="4dp"
-                        android:src="@drawable/ic_chevron_right"
-                        android:tint="@color/blbl_my_action_content"
-                        android:contentDescription="@null" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btn_mango_account"
-                android:layout_width="match_parent"
-                android:layout_height="72dp"
-                android:layout_marginBottom="20dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:stateListAnimator="@animator/blbl_focus_scale"
-                app:cardBackgroundColor="?attr/colorSurface"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:rippleColor="?attr/blblAccentWeak"
-                app:strokeColor="?attr/blblFocusStrokeFocusOnlyColor"
-                app:strokeWidth="0dp">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="20dp">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="20dp"
+                        android:alpha="0.14"
+                        android:background="?attr/blblOnPageBackdropSecondary" />
+
+                    <!-- 爱奇艺 -->
                     <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:layout_width="match_parent"
+                        android:layout_height="92dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="20dp">
                         <TextView
-                            android:id="@+id/mango_account_name"
-                            android:layout_width="match_parent"
+                            android:layout_width="184dp"
                             android:layout_height="wrap_content"
-                            android:maxLines="1"
-                            android:ellipsize="end"
-                            android:text="@string/mango_account_title"
+                            android:text="@string/platform_iqiyi"
                             android:textColor="?attr/blblOnPageBackdrop"
-                            android:textSize="18sp"
+                            android:textSize="20sp"
                             android:fontFamily="sans-serif-medium" />
-                        <TextView
-                            android:id="@+id/mango_account_status"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
-                            android:maxLines="1"
-                            android:ellipsize="end"
-                            android:text="@string/mango_account_logged_out"
-                            android:textColor="?attr/blblOnPageBackdropSecondary"
-                            android:textSize="14sp" />
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/account_iqiyi"
+                            android:layout_width="0dp"
+                            android:layout_height="68dp"
+                            android:layout_weight="1"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusUp="@id/account_bilibili"
+                            android:nextFocusDown="@id/account_mango"
+                            android:nextFocusRight="@id/remove_iqiyi"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="12dp">
+                                <FrameLayout
+                                    android:layout_width="52dp"
+                                    android:layout_height="52dp">
+                                    <com.google.android.material.imageview.ShapeableImageView
+                                        android:id="@+id/logo_iqiyi"
+                                        android:layout_width="52dp"
+                                        android:layout_height="52dp"
+                                        android:scaleType="centerCrop"
+                                        android:src="@drawable/ic_platform_iqiyi"
+                                        android:contentDescription="@string/platform_iqiyi"
+                                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay_Blbl_Circular" />
+                                    <ImageView
+                                        android:id="@+id/vip_iqiyi"
+                                        android:layout_width="20dp"
+                                        android:layout_height="20dp"
+                                        android:layout_gravity="bottom|end"
+                                        android:src="@drawable/ic_vip_badge"
+                                        android:contentDescription="@string/vip_badge_description"
+                                        android:visibility="gone" />
+                                </FrameLayout>
+                                <TextView
+                                    android:id="@+id/name_iqiyi"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="14dp"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/mango_account_logged_out"
+                                    android:textColor="@color/blbl_my_account_primary"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-medium" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/remove_iqiyi"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="12dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusLeft="@id/account_iqiyi"
+                            android:nextFocusUp="@id/remove_bilibili"
+                            android:nextFocusDown="@id/remove_mango"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <ImageView
+                                android:id="@+id/remove_iqiyi_icon"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_platform_remove"
+                                android:tint="?attr/blblDanger"
+                                android:contentDescription="@string/account_logout_action" />
+                        </com.google.android.material.card.MaterialCardView>
                     </LinearLayout>
-                    <TextView
-                        android:id="@+id/mango_account_action"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:text="@string/mango_account_action_login"
-                        android:textColor="?attr/blblOnPageBackdropSecondary"
-                        android:textSize="16sp"
-                        android:fontFamily="sans-serif-medium" />
-                    <ImageView
-                        android:id="@+id/mango_account_arrow"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_marginStart="4dp"
-                        android:src="@drawable/ic_chevron_right"
-                        android:tint="?attr/blblOnPageBackdropSecondary"
-                        android:contentDescription="@null" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="20dp"
+                        android:alpha="0.14"
+                        android:background="?attr/blblOnPageBackdropSecondary" />
+
+                    <!-- 芒果 TV -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="92dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="20dp">
+                        <TextView
+                            android:layout_width="184dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/platform_mango"
+                            android:textColor="?attr/blblOnPageBackdrop"
+                            android:textSize="20sp"
+                            android:fontFamily="sans-serif-medium" />
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/account_mango"
+                            android:layout_width="0dp"
+                            android:layout_height="68dp"
+                            android:layout_weight="1"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusUp="@id/account_iqiyi"
+                            android:nextFocusDown="@id/account_tencent"
+                            android:nextFocusRight="@id/remove_mango"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="12dp">
+                                <FrameLayout
+                                    android:layout_width="52dp"
+                                    android:layout_height="52dp">
+                                    <com.google.android.material.imageview.ShapeableImageView
+                                        android:id="@+id/logo_mango"
+                                        android:layout_width="52dp"
+                                        android:layout_height="52dp"
+                                        android:scaleType="centerCrop"
+                                        android:src="@drawable/ic_platform_mango"
+                                        android:contentDescription="@string/platform_mango"
+                                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay_Blbl_Circular" />
+                                    <ImageView
+                                        android:id="@+id/vip_mango"
+                                        android:layout_width="20dp"
+                                        android:layout_height="20dp"
+                                        android:layout_gravity="bottom|end"
+                                        android:src="@drawable/ic_vip_badge"
+                                        android:contentDescription="@string/vip_badge_description"
+                                        android:visibility="gone" />
+                                </FrameLayout>
+                                <TextView
+                                    android:id="@+id/name_mango"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="14dp"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/mango_account_logged_out"
+                                    android:textColor="@color/blbl_my_account_primary"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-medium" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/remove_mango"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="12dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusLeft="@id/account_mango"
+                            android:nextFocusUp="@id/remove_iqiyi"
+                            android:nextFocusDown="@id/remove_tencent"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <ImageView
+                                android:id="@+id/remove_mango_icon"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_platform_remove"
+                                android:tint="?attr/blblDanger"
+                                android:contentDescription="@string/account_logout_action" />
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="20dp"
+                        android:alpha="0.14"
+                        android:background="?attr/blblOnPageBackdropSecondary" />
+
+                    <!-- 腾讯视频（本轮仅占位） -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="92dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="20dp">
+                        <TextView
+                            android:layout_width="184dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/platform_tencent"
+                            android:textColor="?attr/blblOnPageBackdrop"
+                            android:textSize="20sp"
+                            android:fontFamily="sans-serif-medium" />
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/account_tencent"
+                            android:layout_width="0dp"
+                            android:layout_height="68dp"
+                            android:layout_weight="1"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusUp="@id/account_mango"
+                            android:nextFocusDown="@id/btn_history"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="12dp">
+                                <FrameLayout
+                                    android:layout_width="52dp"
+                                    android:layout_height="52dp">
+                                    <com.google.android.material.imageview.ShapeableImageView
+                                        android:id="@+id/logo_tencent"
+                                        android:layout_width="52dp"
+                                        android:layout_height="52dp"
+                                        android:scaleType="centerCrop"
+                                        android:src="@drawable/ic_platform_add"
+                                        android:contentDescription="@string/platform_tencent"
+                                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay_Blbl_Circular" />
+                                    <ImageView
+                                        android:id="@+id/vip_tencent"
+                                        android:layout_width="20dp"
+                                        android:layout_height="20dp"
+                                        android:layout_gravity="bottom|end"
+                                        android:src="@drawable/ic_vip_badge"
+                                        android:contentDescription="@string/vip_badge_description"
+                                        android:visibility="gone" />
+                                </FrameLayout>
+                                <TextView
+                                    android:id="@+id/name_tencent"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="14dp"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/mango_account_logged_out"
+                                    android:textColor="@color/blbl_my_account_primary"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-medium" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/remove_tencent"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="12dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusLeft="@id/account_tencent"
+                            android:nextFocusUp="@id/remove_mango"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <ImageView
+                                android:id="@+id/remove_tencent_icon"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_platform_remove"
+                                android:tint="?attr/blblDanger"
+                                android:contentDescription="@string/account_logout_action" />
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

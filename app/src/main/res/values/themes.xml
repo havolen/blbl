@@ -6,6 +6,7 @@
         <item name="blblAccentContainer">@color/blbl_accent_dark_soft_pink_container</item>
         <item name="blblAccentWeak">@color/blbl_accent_dark_soft_pink_weak</item>
         <item name="blblAccentPressed">@color/blbl_accent_dark_soft_pink_pressed</item>
+        <item name="blblDanger">@color/blbl_red</item>
         <item name="colorOnSecondary">@color/blbl_on_dark_soft_pink</item>
     </style>
 
@@ -17,6 +18,7 @@
         <item name="blblAccentContainer">@color/blbl_accent_dark_soft_pink_container</item>
         <item name="blblAccentWeak">@color/blbl_accent_dark_soft_pink_weak</item>
         <item name="blblAccentPressed">@color/blbl_accent_dark_soft_pink_pressed</item>
+        <item name="blblDanger">@color/blbl_red</item>
         <item name="blblPageBackdrop">?attr/colorBackground</item>
         <item name="blblDialogSurface">?attr/colorSurface</item>
         <item name="blblOnPageBackdrop">?attr/colorOnSurface</item>

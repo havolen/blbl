@@ -24,6 +24,7 @@
     <attr name="blblAccentContainer" format="color" />
     <attr name="blblAccentWeak" format="color" />
     <attr name="blblAccentPressed" format="color" />
+    <attr name="blblDanger" format="color" />
     <attr name="blblNavigationSelectedBackground" format="color" />
     <attr name="blblNavigationSelectedText" format="color" />
     <attr name="blblNavigationFocusBackground" format="color" />

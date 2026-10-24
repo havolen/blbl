@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    android:overScrollMode="never">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        android:paddingBottom="4dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp">
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/avatar_logo"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_platform_bilibili"
+                    android:contentDescription="@string/account_avatar"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay_Blbl_Circular" />
+                <ImageView
+                    android:id="@+id/vip_badge"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="bottom|end"
+                    android:src="@drawable/ic_vip_badge"
+                    android:contentDescription="@string/vip_badge_description"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/tv_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="?attr/blblOnPageBackdrop"
+                    android:textSize="20sp"
+                    android:fontFamily="sans-serif-medium" />
+                <TextView
+                    android:id="@+id/tv_subtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="@string/account_manage_subtitle"
+                    android:textColor="?attr/blblOnPageBackdropSecondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/stats_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/btn_following"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_account_action"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingVertical="8dp"
+                android:stateListAnimator="@animator/blbl_focus_scale">
+                <TextView
+                    android:id="@+id/tv_following"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/blbl_my_account_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tv_following_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="@string/label_following"
+                    android:textColor="?attr/blblOnPageBackdropSecondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btn_follower"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_account_action"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingVertical="8dp"
+                android:stateListAnimator="@animator/blbl_focus_scale">
+                <TextView
+                    android:id="@+id/tv_follower"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/blbl_my_account_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tv_follower_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="@string/label_follower"
+                    android:textColor="?attr/blblOnPageBackdropSecondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingVertical="8dp">
+                <TextView
+                    android:id="@+id/tv_coins"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/blblOnPageBackdrop"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="@string/label_coins"
+                    android:textColor="?attr/blblOnPageBackdropSecondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/exp_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView
+                android:id="@+id/tv_exp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="?attr/blblOnPageBackdropSecondary"
+                android:textSize="13sp" />
+            <TextView
+                android:id="@+id/tv_level"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/blblOnPageBackdrop"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progress_exp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:visibility="gone"
+            app:indicatorColor="?attr/blblAccent"
+            app:trackColor="?attr/colorSurface" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_account_action"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="6dp">
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/vip_check"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:focusable="true"
+                android:stateListAnimator="@animator/blbl_focus_scale"
+                android:text="@string/account_vip_label"
+                android:textColor="@color/blbl_my_account_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tv_vip_site"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:textColor="?attr/blblOnPageBackdropSecondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btn_restore_vip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_account_action"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:minHeight="44dp"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="8dp"
+            android:stateListAnimator="@animator/blbl_focus_scale"
+            android:text="@string/account_vip_restore"
+            android:textColor="@color/blbl_my_account_primary"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/btn_switch_account"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_account_action"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:minHeight="48dp"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="10dp"
+            android:stateListAnimator="@animator/blbl_focus_scale"
+            android:text="@string/account_switch_action"
+            android:textColor="@color/blbl_my_account_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/account_switch_panel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/account_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/btn_add_account"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/focus_safe_padding_h"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_account_action"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:minHeight="46dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:stateListAnimator="@animator/blbl_focus_scale"
+                android:text="@string/account_add_action"
+                android:textColor="@color/blbl_my_account_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btn_logout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_account_action"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:minHeight="48dp"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="10dp"
+            android:stateListAnimator="@animator/blbl_focus_scale"
+            android:text="@string/account_logout_action"
+            android:textColor="?attr/blblDanger"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/pb_loading"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

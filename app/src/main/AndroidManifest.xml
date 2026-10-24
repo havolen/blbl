@@ -50,6 +50,10 @@
 	            android:exported="false"
 	            android:screenOrientation="sensorLandscape" />
 	        <activity
+	            android:name=".feature.login.IqiyiLoginActivity"
+	            android:exported="false"
+	            android:screenOrientation="sensorLandscape" />
+	        <activity
 	            android:name=".feature.player.MangoNativePlayerActivity"
 	            android:configChanges="keyboardHidden|orientation|screenSize"
 	            android:exported="false"

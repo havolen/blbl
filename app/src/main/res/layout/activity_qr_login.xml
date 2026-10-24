@@ -70,7 +70,7 @@
             android:id="@+id/tv_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="二维码登录"
+            android:text="@string/bili_login_title"
             android:textColor="?attr/blblOnPageBackdrop"
             android:textSize="22sp" />
 

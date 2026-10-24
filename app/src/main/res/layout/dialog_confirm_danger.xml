@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tv_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/account_logout_confirm_message"
+        android:textColor="?attr/blblOnPageBackdropSecondary"
+        android:textSize="15sp"
+        android:lineSpacingExtra="3dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/btn_cancel"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_account_action"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:stateListAnimator="@animator/blbl_focus_scale"
+            android:text="@string/account_cancel"
+            android:textColor="@color/blbl_my_account_primary"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/btn_confirm"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_account_action"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:stateListAnimator="@animator/blbl_focus_scale"
+            android:text="@string/account_logout_confirm_action"
+            android:textColor="?attr/blblDanger"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

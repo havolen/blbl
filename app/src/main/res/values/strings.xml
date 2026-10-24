@@ -36,7 +36,7 @@
     <string name="history_source_bilibili">哔哩哔哩</string>
     <string name="history_source_mango">芒果 TV</string>
     <string name="mango_login_qr_description">芒果 TV 登录二维码</string>
-    <string name="mango_login_title">芒果 TV 账号</string>
+    <string name="mango_login_title">芒果 TV 登录</string>
     <string name="mango_login_refresh">刷新二维码</string>
     <string name="mango_login_logout">退出芒果账号</string>
     <string name="mango_login_requesting_qr">正在申请二维码…</string>
@@ -188,4 +188,49 @@
     <string name="player_btn_forward_10">前进 10 秒</string>
     <string name="player_source_bilibili">哔哩哔哩</string>
     <string name="player_source_mango">芒果 TV</string>
+
+    <!-- Platform account table / management -->
+    <string name="platform_bilibili">哔哩哔哩</string>
+    <string name="platform_iqiyi">爱奇艺</string>
+    <string name="platform_mango">芒果 TV</string>
+    <string name="platform_tencent">腾讯视频</string>
+    <string name="bili_login_title">哔哩哔哩登录</string>
+    <string name="account_row_description_fmt">%1$s账号，%2$s</string>
+    <string name="account_row_login_description_fmt">登录%1$s账号</string>
+    <string name="account_remove_description_fmt">退出%1$s账号</string>
+    <string name="account_manage_title_fmt">%1$s账号管理</string>
+    <string name="account_manage_subtitle">当前登录账号</string>
+    <string name="account_logout_action">退出账号</string>
+    <string name="account_switch_action">切换账号</string>
+    <string name="account_add_action">添加账号</string>
+    <string name="account_vip_label">VIP</string>
+    <string name="account_vip_status_fmt">网站状态：%1$s</string>
+    <string name="vip_status_vip">VIP</string>
+    <string name="vip_status_not_vip">非 VIP</string>
+    <string name="vip_status_unknown">未知</string>
+    <string name="account_vip_restore">恢复网站值</string>
+    <string name="vip_badge_description">VIP</string>
+    <string name="account_logout_confirm_title_fmt">退出%1$s账号？</string>
+    <string name="account_logout_confirm_message">仅清除该平台的登录会话，不会删除搜索历史、偏好设置或其他平台账号。</string>
+    <string name="account_logout_confirm_action">确认退出</string>
+    <string name="account_cancel">取消</string>
+    <string name="account_stats_loading">加载中…</string>
+    <string name="account_stats_failed">账号数据暂时无法加载</string>
+
+    <!-- iQiyi QR login -->
+    <string name="iqiyi_login_title">爱奇艺登录</string>
+    <string name="iqiyi_login_qr_description">爱奇艺登录二维码</string>
+    <string name="iqiyi_login_requesting_qr">正在申请二维码…</string>
+    <string name="iqiyi_login_scan_prompt">请使用爱奇艺 App 扫码并确认登录</string>
+    <string name="iqiyi_login_request_failed">二维码申请失败，请检查网络后刷新</string>
+    <string name="iqiyi_login_waiting">等待扫码…</string>
+    <string name="iqiyi_login_network_retry">网络暂时不可用，正在重试…</string>
+    <string name="iqiyi_login_expired">二维码已失效，请刷新后重试</string>
+    <string name="iqiyi_login_profile_failed">登录成功，但未能获取爱奇艺账号信息，请重试</string>
+    <string name="iqiyi_login_session_failed">登录成功，但未能保存爱奇艺会话，请重试</string>
+    <string name="iqiyi_login_success">登录成功，正在返回</string>
+    <string name="iqiyi_login_signed_out">已退出爱奇艺账号</string>
+    <string name="iqiyi_login_account_fmt">已登录：%1$s（%2$s）</string>
+    <string name="iqiyi_login_refresh">刷新二维码</string>
+    <string name="iqiyi_login_clear">退出登录</string>
 </resources>

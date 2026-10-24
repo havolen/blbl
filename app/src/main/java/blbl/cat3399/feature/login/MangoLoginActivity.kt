@@ -104,7 +104,7 @@ class MangoLoginActivity : BaseActivity() {
 
                     is MangoLoginApi.PollResult.LoggedIn -> {
                         try {
-                            sessionStore.saveAccount(result.profile.username, result.profile.uid)
+                            sessionStore.saveAccount(result.profile.username, result.profile.uid, result.profile.vip)
                         } catch (error: IllegalArgumentException) {
                             AppLog.w("MangoLogin", "login completed without a persistable session")
                             binding.tvStatus.text = getString(R.string.mango_login_session_not_saved)

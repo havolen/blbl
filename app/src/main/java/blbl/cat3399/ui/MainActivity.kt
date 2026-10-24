@@ -26,7 +26,6 @@ import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
 import blbl.cat3399.BuildConfig
 import blbl.cat3399.R
-import blbl.cat3399.core.account.AccountAvatar
 import blbl.cat3399.core.account.AccountSessionStore
 import blbl.cat3399.core.account.BiliSession
 import blbl.cat3399.core.api.BiliApi
@@ -606,7 +605,9 @@ class MainActivity : BaseActivity(), MainNavigationHost {
 
     private fun configureTopNavigationItems(selectedKey: String) {
         val visibleKeys = BiliClient.prefs.topNavigationVisibleKeys
-        val accountAvatarUrl = AccountAvatar.resolve()
+        // The "My" sidebar entry always uses the neutral person icon; real Bilibili avatars
+        // must not leak into the navigation chrome.
+        val accountAvatarUrl: String? = null
         val visibilityChanged = renderedVisibleKeys != visibleKeys
         val avatarChanged = renderedAccountAvatarUrl != accountAvatarUrl
         val items = MainRootNavRegistry.topNavItems(this, visibleKeys, accountAvatarUrl)
