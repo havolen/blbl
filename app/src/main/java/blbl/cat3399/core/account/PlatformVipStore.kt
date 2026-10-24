@@ -50,7 +50,7 @@ class PlatformVipStore(context: Context) {
         platform: Platform,
         accountKey: String,
         websiteVip: Boolean?,
-    ): Boolean = override(platform, accountKey) ?: websiteVip ?: siteVip(platform, accountKey) ?: false
+    ): Boolean = override(platform, accountKey) ?: websiteVip ?: false
 
     fun clearAccount(
         platform: Platform,

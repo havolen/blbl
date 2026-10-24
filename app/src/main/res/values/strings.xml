@@ -198,7 +198,7 @@
     <string name="account_row_description_fmt">%1$s账号，%2$s</string>
     <string name="account_row_login_description_fmt">登录%1$s账号</string>
     <string name="account_remove_description_fmt">退出%1$s账号</string>
-    <string name="account_manage_title_fmt">%1$s账号管理</string>
+    <string name="account_manage_title_fmt">%1$s 账号管理</string>
     <string name="account_manage_subtitle">当前登录账号</string>
     <string name="account_logout_action">退出账号</string>
     <string name="account_switch_action">切换账号</string>

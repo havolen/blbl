@@ -63,6 +63,10 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
     private var dialogBinding: DialogAccountManageBinding? = null
     private var dialogLoadJob: Job? = null
     private var pendingLoginFocusPlatform: AccountPlatform? = null
+    private var mangoLiveUid: String? = null
+    private var mangoLiveVip: Boolean? = null
+    private var iqiyiLiveUid: String? = null
+    private var iqiyiLiveVip: Boolean? = null
     private val backStackListener = FragmentManager.OnBackStackChangedListener { updateVisibility() }
 
     private val loginLauncher =
@@ -105,14 +109,7 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                BiliSession.state.collect { session ->
-                    if (session.mid != null && session.vip != null) {
-                        vipStore.setSiteVip(
-                            PlatformVipStore.Platform.BILIBILI,
-                            PlatformVipStore.bilibiliKey(session.mid),
-                            session.vip,
-                        )
-                    }
+                BiliSession.state.collect {
                     renderTable()
                     if (accountDialogPlatform == AccountPlatform.BILIBILI && accountDialog?.isShowing == true) {
                         refreshDialogHeader(AccountPlatform.BILIBILI)
@@ -204,6 +201,8 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         val mangoKey = PlatformVipStore.platformKey(mango?.uid)
         val iqiyi = iqiyiSessionStore.currentAccount()
         val iqiyiKey = PlatformVipStore.platformKey(iqiyi?.uid)
+        val iqiyiWebsiteVip = if (iqiyi != null && iqiyi.uid == iqiyiLiveUid) iqiyiLiveVip else null
+        val mangoWebsiteVip = if (mango != null && mango.uid == mangoLiveUid) mangoLiveVip else null
         return listOf(
             PlatformState(
                 platform = AccountPlatform.BILIBILI,
@@ -222,11 +221,11 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
                 loggedIn = iqiyi != null,
                 name = iqiyi?.username,
                 accountKey = iqiyiKey,
-                websiteVip = iqiyi?.vip,
+                websiteVip = iqiyiWebsiteVip,
                 effectiveVip = iqiyi != null && vipStore.effectiveVip(
                     PlatformVipStore.Platform.IQIYI,
                     iqiyiKey,
-                    iqiyi.vip,
+                    iqiyiWebsiteVip,
                 ),
             ),
             PlatformState(
@@ -234,11 +233,11 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
                 loggedIn = mango != null,
                 name = mango?.username,
                 accountKey = mangoKey,
-                websiteVip = mango?.vip,
+                websiteVip = mangoWebsiteVip,
                 effectiveVip = mango != null && vipStore.effectiveVip(
                     PlatformVipStore.Platform.MANGO,
                     mangoKey,
-                    mango.vip,
+                    mangoWebsiteVip,
                 ),
             ),
             PlatformState(
@@ -360,10 +359,8 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
             try {
                 val profile = mangoAccountApi.fetchProfile()
                 mangoSessionStore.saveAccount(profile.username, profile.uid, profile.vip)
-                val key = PlatformVipStore.platformKey(profile.uid ?: account.uid)
-                if (profile.vip != null) {
-                    vipStore.setSiteVip(PlatformVipStore.Platform.MANGO, key, profile.vip)
-                }
+                mangoLiveUid = profile.uid ?: account.uid
+                mangoLiveVip = profile.vip
                 renderTable()
                 if (accountDialogPlatform == AccountPlatform.MANGO && accountDialog?.isShowing == true) {
                     refreshDialog(AccountPlatform.MANGO)
@@ -372,6 +369,12 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
                 throw cancelled
             } catch (error: Throwable) {
                 AppLog.w("My", "Mango profile unavailable: ${error.javaClass.simpleName}")
+                mangoLiveUid = account.uid
+                mangoLiveVip = null
+                renderTable()
+                if (accountDialogPlatform == AccountPlatform.MANGO && accountDialog?.isShowing == true) {
+                    refreshDialog(AccountPlatform.MANGO)
+                }
             }
         }
     }
@@ -380,12 +383,19 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         val account = iqiyiSessionStore.currentAccount() ?: return
         iqiyiRefreshJob?.cancel()
         iqiyiRefreshJob = viewLifecycleOwner.lifecycleScope.launch {
-            val profile = iqiyiApi.fetchProfile() ?: return@launch
-            runCatching { iqiyiSessionStore.saveAccount(profile.username, profile.uid, profile.vip) }
-            val key = PlatformVipStore.platformKey(profile.uid ?: account.uid)
-            if (profile.vip != null) {
-                vipStore.setSiteVip(PlatformVipStore.Platform.IQIYI, key, profile.vip)
+            val profile = iqiyiApi.fetchProfile()
+            if (profile == null) {
+                iqiyiLiveUid = account.uid
+                iqiyiLiveVip = null
+                renderTable()
+                if (accountDialogPlatform == AccountPlatform.IQIYI && accountDialog?.isShowing == true) {
+                    refreshDialog(AccountPlatform.IQIYI)
+                }
+                return@launch
             }
+            runCatching { iqiyiSessionStore.saveAccount(profile.username, profile.uid, profile.vip) }
+            iqiyiLiveUid = profile.uid ?: account.uid
+            iqiyiLiveVip = profile.vip
             renderTable()
             if (accountDialogPlatform == AccountPlatform.IQIYI && accountDialog?.isShowing == true) {
                 refreshDialog(AccountPlatform.IQIYI)
@@ -630,12 +640,16 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
                 val account = mangoSessionStore.currentAccount()
                 vipStore.clearAccount(PlatformVipStore.Platform.MANGO, PlatformVipStore.platformKey(account?.uid))
                 mangoSessionStore.clear()
+                mangoLiveUid = null
+                mangoLiveVip = null
             }
 
             AccountPlatform.IQIYI -> {
                 val account = iqiyiSessionStore.currentAccount()
                 vipStore.clearAccount(PlatformVipStore.Platform.IQIYI, PlatformVipStore.platformKey(account?.uid))
                 iqiyiSessionStore.clear()
+                iqiyiLiveUid = null
+                iqiyiLiveVip = null
             }
 
             AccountPlatform.TENCENT -> return
