@@ -12,8 +12,20 @@ class MainNavigationKeysTest {
         assertEquals(keys.MY_ACCOUNT, keys.launchKey(keys.LAST_VISITED, keys.MY_ACCOUNT, listOf(keys.SEARCH)))
     }
 
-    @Test fun defaultsHideHistoryAndFavoritesWithoutRemovingTheirRoutes() {
-        assertEquals(setOf(keys.SEARCH, keys.RECOMMEND, keys.POPULAR, keys.CATEGORY, keys.LIVE, keys.MY_WATCH_LATER), keys.defaultVisible)
+    @Test fun defaultsIncludeHistoryAndFavorites() {
+        assertEquals(
+            setOf(
+                keys.SEARCH,
+                keys.RECOMMEND,
+                keys.POPULAR,
+                keys.CATEGORY,
+                keys.LIVE,
+                keys.MY_HISTORY,
+                keys.MY_FAVORITES,
+                keys.MY_WATCH_LATER,
+            ),
+            keys.defaultVisible,
+        )
         assertEquals(keys.MY_HISTORY, keys.visibleFallback(keys.MY_HISTORY, listOf(keys.MY_HISTORY)))
         assertEquals(keys.MY_FAVORITES, keys.visibleFallback(keys.MY_FAVORITES, listOf(keys.MY_FAVORITES)))
     }
