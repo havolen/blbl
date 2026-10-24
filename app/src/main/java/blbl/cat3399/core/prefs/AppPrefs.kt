@@ -151,8 +151,18 @@ class AppPrefs(context: Context) {
             val catalogAdded = prefs.getBoolean(KEY_TOP_NAV_CATALOG_ADDED, false)
             val resolved =
                 if (!catalogAdded) {
-                    prefs.edit().putBoolean(KEY_TOP_NAV_CATALOG_ADDED, true).apply()
-                    if (saved == null) selected else selected + MainNavigationKeys.CATALOG
+                    val withCatalog = selected + MainNavigationKeys.CATALOG
+                    // Persist the added entry as well; otherwise the one-shot migration would be
+                    // forgotten after the flag was written.
+                    prefs
+                        .edit()
+                        .putBoolean(KEY_TOP_NAV_CATALOG_ADDED, true)
+                        .putStringSet(
+                            KEY_TOP_NAVIGATION_VISIBLE_KEYS,
+                            MainNavigationKeys.all.filter { it in withCatalog }.toSet(),
+                        )
+                        .apply()
+                    withCatalog
                 } else {
                     selected
                 }
@@ -1162,7 +1172,7 @@ class AppPrefs(context: Context) {
         private const val KEY_MAIN_LIVE_VISIBLE_TABS = "main_live_visible_tabs"
         private const val KEY_MAIN_MY_VISIBLE_TABS = "main_my_visible_tabs"
         private const val KEY_TOP_NAVIGATION_VISIBLE_KEYS = "top_navigation_visible_keys"
-        private const val KEY_TOP_NAV_CATALOG_ADDED = "top_nav_catalog_added_v6"
+        private const val KEY_TOP_NAV_CATALOG_ADDED = "top_nav_catalog_added_v7"
         private const val KEY_DANMAKU_TEXT_SIZE_MIGRATED = "danmaku_text_size_migrated_v2"
         private const val KEY_HISTORY_SOURCE = "my_history_source"
         private const val KEY_FOLLOWING_LIST_ORDER = "following_list_order"

@@ -18,6 +18,7 @@ internal class CatalogCategoryAdapter(
     private val onClickCategory: (ContentCategory) -> Unit,
     private val onMoveLeft: () -> Unit,
     private val onMoveRight: () -> Unit,
+    private val columns: Int,
 ) : RecyclerView.Adapter<CatalogCategoryAdapter.Vh>() {
     private val items: List<ContentCategory> = ContentCategory.entries
     private var selected: ContentCategory = ContentCategory.TV
@@ -60,15 +61,24 @@ internal class CatalogCategoryAdapter(
         )
         holder.itemView.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+            val column = position % columns
             when (keyCode) {
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    onMoveRight()
-                    true
+                    if (column == columns - 1) {
+                        onMoveRight()
+                        true
+                    } else {
+                        false
+                    }
                 }
 
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    onMoveLeft()
-                    true
+                    if (column == 0) {
+                        onMoveLeft()
+                        true
+                    } else {
+                        false
+                    }
                 }
 
                 else -> false
@@ -118,6 +128,7 @@ internal class CatalogSiteAdapter(
     private val onFocusSite: (StreamingSite) -> Unit,
     private val onClickSite: (StreamingSite) -> Unit,
     private val onMoveLeft: () -> Unit,
+    private val columns: Int,
 ) : RecyclerView.Adapter<CatalogSiteAdapter.Vh>() {
     private val items = ArrayList<StreamingSite>()
     private var focusedPosition: Int = RecyclerView.NO_POSITION
@@ -156,9 +167,22 @@ internal class CatalogSiteAdapter(
         holder.itemView.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             when (keyCode) {
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP -> {
-                    onMoveLeft()
-                    true
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (position % columns == 0) {
+                        onMoveLeft()
+                        true
+                    } else {
+                        false
+                    }
+                }
+
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (position < columns) {
+                        onMoveLeft()
+                        true
+                    } else {
+                        false
+                    }
                 }
 
                 else -> false

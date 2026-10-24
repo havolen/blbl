@@ -13,6 +13,7 @@ import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import blbl.cat3399.BuildConfig
 import blbl.cat3399.R
 import blbl.cat3399.core.account.WebLoginSite
 import blbl.cat3399.core.account.WebSiteSessionStore
@@ -59,6 +60,7 @@ class WebQrLoginActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityWebQrLoginBinding.inflate(layoutInflater.cloneInUserScale(this))
         setContentView(binding.root)
+        if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
         Immersive.apply(this, BiliClient.prefs.fullscreenEnabled)
 
         site = WebLoginSite.fromKey(intent.getStringExtra(EXTRA_SITE)) ?: run {
@@ -192,14 +194,33 @@ class WebQrLoginActivity : BaseActivity() {
 
         private const val QR_TAB_JS = """
             (function() {
-              var el = document.querySelector('#YT-qrbtn');
-              if (el) { el.click(); return 'clicked'; }
-              var nodes = document.querySelectorAll('a,div,span,button');
-              for (var i = 0; i < nodes.length; i++) {
-                var text = (nodes[i].textContent || '').trim();
-                if (text === '扫码登录更安全' || text === '扫码登录') {
-                  nodes[i].click();
-                  return 'clicked-text';
+              var clicked = function(el) {
+                if (!el) return false;
+                var target = el.closest('a,button,div,span,i') || el;
+                target.click();
+                return true;
+              };
+              if (clicked(document.querySelector('#YT-qrbtn'))) return 'clicked-id';
+              var doc = document;
+              try {
+                var frames = document.querySelectorAll('iframe');
+                for (var i = 0; i < frames.length; i++) {
+                  var inner = frames[i].contentDocument;
+                  if (!inner) continue;
+                  var nodes = inner.querySelectorAll('body *');
+                  for (var j = 0; j < nodes.length; j++) {
+                    var t = (nodes[j].textContent || '').trim();
+                    if ((t === '扫码登录更安全' || t === '扫码登录') && nodes[j].children.length === 0) {
+                      if (clicked(nodes[j])) return 'clicked-iframe';
+                    }
+                  }
+                }
+              } catch (e) {}
+              var all = doc.querySelectorAll('body *');
+              for (var k = 0; k < all.length; k++) {
+                var text = (all[k].textContent || '').trim();
+                if ((text === '扫码登录更安全' || text === '扫码登录') && all[k].children.length === 0) {
+                  if (clicked(all[k])) return 'clicked-text';
                 }
               }
               return 'none';

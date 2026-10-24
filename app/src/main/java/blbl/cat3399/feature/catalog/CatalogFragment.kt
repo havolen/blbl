@@ -55,6 +55,7 @@ class CatalogFragment : Fragment(), PageSectionFocusHost, BackPressHandler {
                 },
                 onMoveLeft = { requestSidebarFocus() },
                 onMoveRight = { focusFirstSite() },
+                columns = CATEGORY_COLUMNS,
             )
         binding.recyclerCategories.layoutManager = GridLayoutManager(requireContext(), CATEGORY_COLUMNS)
         binding.recyclerCategories.adapter = categoryAdapter
@@ -68,6 +69,7 @@ class CatalogFragment : Fragment(), PageSectionFocusHost, BackPressHandler {
                 },
                 onClickSite = { site -> openSite(site) },
                 onMoveLeft = { focusSelectedCategory() },
+                columns = SITE_COLUMNS,
             )
         binding.recyclerSites.layoutManager = GridLayoutManager(requireContext(), SITE_COLUMNS)
         binding.recyclerSites.adapter = siteAdapter
