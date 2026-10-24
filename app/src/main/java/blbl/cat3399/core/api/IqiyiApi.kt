@@ -41,7 +41,10 @@ class IqiyiApi(
         val qualityLabel: String,
         val width: Int,
         val durationSec: Int,
-    )
+        val previewSeconds: Int = 0,
+    ) {
+        val isPreview: Boolean get() = previewSeconds > 0
+    }
 
     sealed interface PollResult {
         data object Waiting : PollResult
@@ -171,6 +174,13 @@ class IqiyiApi(
                 if (json.optString("code") != API_SUCCESS) return null
                 val data = json.optJSONObject("data") ?: return null
                 val duration = data.optInt("duration", 0)
+                val previewMinutes = data.optString("previewTime", "0").toIntOrNull() ?: 0
+                val previewSeconds =
+                    when {
+                        previewMinutes > 0 -> previewMinutes * 60
+                        data.optInt("prv", 0) > 0 -> 60
+                        else -> 0
+                    }
                 val candidates = ArrayList<StreamCandidate>()
                 val streams = data.optJSONArray("vidl")
                 if (streams != null) {
@@ -205,7 +215,13 @@ class IqiyiApi(
                     compareBy<StreamCandidate> { it.width * 1000 + it.height }
                         .thenBy { if (it.vd in H265_VD) 0 else 1 },
                 ) ?: return null
-                Stream(best.url, best.label, best.width, duration)
+                Stream(
+                    url = best.url,
+                    qualityLabel = best.label,
+                    width = best.width,
+                    durationSec = duration,
+                    previewSeconds = previewSeconds,
+                )
             }
         } catch (t: Throwable) {
             if (t is kotlinx.coroutines.CancellationException) throw t

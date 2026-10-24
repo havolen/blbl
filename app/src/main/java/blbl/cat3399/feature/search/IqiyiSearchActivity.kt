@@ -124,6 +124,20 @@ class IqiyiSearchActivity : BaseActivity() {
                     }
                     return@launch
                 }
+                if (stream.isPreview && item.videoPageUrl.isNotBlank()) {
+                    AppToast.show(
+                        this@IqiyiSearchActivity,
+                        getString(R.string.iqiyi_search_vip_web_fallback),
+                    )
+                    startActivity(
+                        IqiyiWebPlayerActivity.intent(
+                            context = this@IqiyiSearchActivity,
+                            url = item.videoPageUrl,
+                            title = item.title,
+                        ),
+                    )
+                    return@launch
+                }
                 startActivity(
                     IqiyiPlayerActivity.intent(
                         context = this@IqiyiSearchActivity,

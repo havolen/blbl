@@ -244,6 +244,7 @@
     <string name="iqiyi_search_loading_failed">爱奇艺搜索失败，请重试</string>
     <string name="iqiyi_search_resolving">正在解析爱奇艺播放地址…</string>
     <string name="iqiyi_search_play_failed">爱奇艺播放地址解析失败</string>
+    <string name="iqiyi_search_vip_web_fallback">会员内容，正在使用网页播放器</string>
     <string name="iqiyi_player_title">爱奇艺播放</string>
     <string name="iqiyi_player_exit">退出播放器</string>
     <string name="iqiyi_player_failed">播放失败：%1$s</string>
