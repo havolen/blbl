@@ -133,7 +133,6 @@ internal fun PlayerActivity.hideSponsorSubmitPanel(restorePlayback: Boolean) {
     }
     binding.root.post {
         when {
-            binding.btnSponsorSubmit.requestSponsorSubmitFocusIfUsable() -> Unit
             binding.btnPlayPause.requestSponsorSubmitFocusIfUsable() -> Unit
             else -> focusFirstControl()
         }

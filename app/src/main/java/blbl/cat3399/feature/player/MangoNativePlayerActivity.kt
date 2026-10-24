@@ -21,9 +21,12 @@ import android.widget.TextView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
+import androidx.media3.common.C
 import androidx.media3.common.VideoSize
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -498,7 +501,17 @@ class MangoNativePlayerActivity : Activity() {
                     ),
                 ),
         ).createMediaSource(MediaItem.fromUri(url))
-        player = ExoPlayer.Builder(this).build().also { exo ->
+        // Select embedded text tracks even when their language is undetermined; Mango's HLS
+        // subtitles are usually tagged "und", and the default selector would leave them off.
+        val trackSelector =
+            DefaultTrackSelector(this).apply {
+                setParameters(
+                    buildUponParameters()
+                        .setSelectUndeterminedTextLanguage(true)
+                        .setPreferredTextLanguage("zh"),
+                )
+            }
+        player = ExoPlayer.Builder(this).setTrackSelector(trackSelector).build().also { exo ->
             exo.addListener(
                 object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
@@ -511,6 +524,14 @@ class MangoNativePlayerActivity : Activity() {
                         }
                         updateStatus()
                     }
+                    override fun onTracksChanged(tracks: Tracks) {
+                        val textGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+                        val selected = textGroups.count { group ->
+                            (0 until group.length).any { group.isTrackSelected(it) }
+                        }
+                        AppLog.i("MangoSub", "textGroups=${textGroups.size} selectedGroups=$selected")
+                    }
+
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         updateStatus()
                         if (isPlaying) scheduleControlsHide() else showControls()

@@ -388,7 +388,6 @@ internal fun PlayerActivity.focusDownKeyOsdTargetControl() {
             AppPrefs.PLAYER_DOWN_KEY_OSD_FOCUS_COIN -> binding.btnCoin
             AppPrefs.PLAYER_DOWN_KEY_OSD_FOCUS_FAV -> binding.btnFav
             AppPrefs.PLAYER_DOWN_KEY_OSD_FOCUS_LIST_PANEL -> binding.btnListPanel
-            AppPrefs.PLAYER_DOWN_KEY_OSD_FOCUS_SPONSOR_SUBMIT -> binding.btnSponsorSubmit
             AppPrefs.PLAYER_DOWN_KEY_OSD_FOCUS_ADVANCED -> binding.btnAdvanced
             else -> binding.btnPlayPause
         }

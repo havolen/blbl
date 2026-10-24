@@ -33,7 +33,6 @@ internal fun PlayerActivity.applyOsdButtonsVisibility() {
     binding.btnCoin.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_COIN)) View.VISIBLE else View.GONE
     binding.btnFav.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_FAV)) View.VISIBLE else View.GONE
     binding.btnListPanel.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_LIST_PANEL)) View.VISIBLE else View.GONE
-    binding.btnSponsorSubmit.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_SPONSOR_SUBMIT)) View.VISIBLE else View.GONE
     binding.btnAdvanced.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_ADVANCED)) View.VISIBLE else View.GONE
     binding.btnClosePlayer.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_CLOSE_PLAYER)) View.VISIBLE else View.GONE
     if (binding.btnLike.visibility != View.VISIBLE) cancelLikeButtonHoldGesture(resetTriggered = true)

@@ -788,7 +788,6 @@ class AppPrefs(context: Context) {
                 PLAYER_DOWN_KEY_OSD_FOCUS_COIN,
                 PLAYER_DOWN_KEY_OSD_FOCUS_FAV,
                 PLAYER_DOWN_KEY_OSD_FOCUS_LIST_PANEL,
-                PLAYER_DOWN_KEY_OSD_FOCUS_SPONSOR_SUBMIT,
                 PLAYER_DOWN_KEY_OSD_FOCUS_ADVANCED,
                 -> normalized
 
@@ -809,8 +808,7 @@ class AppPrefs(context: Context) {
                     PLAYER_DOWN_KEY_OSD_FOCUS_COIN,
                     PLAYER_DOWN_KEY_OSD_FOCUS_FAV,
                     PLAYER_DOWN_KEY_OSD_FOCUS_LIST_PANEL,
-                    PLAYER_DOWN_KEY_OSD_FOCUS_SPONSOR_SUBMIT,
-                    PLAYER_DOWN_KEY_OSD_FOCUS_ADVANCED,
+                        PLAYER_DOWN_KEY_OSD_FOCUS_ADVANCED,
                     -> value
 
                     else -> PLAYER_DOWN_KEY_OSD_FOCUS_PLAY_PAUSE
@@ -1398,7 +1396,6 @@ class AppPrefs(context: Context) {
         const val PLAYER_OSD_BTN_COIN = "coin"
         const val PLAYER_OSD_BTN_FAV = "fav"
         const val PLAYER_OSD_BTN_LIST_PANEL = "list_panel"
-        const val PLAYER_OSD_BTN_SPONSOR_SUBMIT = "sponsor_submit"
         const val PLAYER_OSD_BTN_ADVANCED = "advanced"
         const val PLAYER_OSD_BTN_CLOSE_PLAYER = "close_player"
 
@@ -1410,7 +1407,6 @@ class AppPrefs(context: Context) {
                 PLAYER_OSD_BTN_DANMAKU,
                 PLAYER_OSD_BTN_SUBTITLE,
                 PLAYER_OSD_BTN_DETAIL,
-                PLAYER_OSD_BTN_SPONSOR_SUBMIT,
                 PLAYER_OSD_BTN_UP,
                 PLAYER_OSD_BTN_ADVANCED,
                 PLAYER_OSD_BTN_CLOSE_PLAYER,
@@ -1429,7 +1425,6 @@ class AppPrefs(context: Context) {
                 PLAYER_OSD_BTN_COIN,
                 PLAYER_OSD_BTN_FAV,
                 PLAYER_OSD_BTN_LIST_PANEL,
-                PLAYER_OSD_BTN_SPONSOR_SUBMIT,
                 PLAYER_OSD_BTN_ADVANCED,
                 PLAYER_OSD_BTN_CLOSE_PLAYER,
             )
@@ -1445,7 +1440,6 @@ class AppPrefs(context: Context) {
         const val PLAYER_DOWN_KEY_OSD_FOCUS_COIN = "coin"
         const val PLAYER_DOWN_KEY_OSD_FOCUS_FAV = "fav"
         const val PLAYER_DOWN_KEY_OSD_FOCUS_LIST_PANEL = "list_panel"
-        const val PLAYER_DOWN_KEY_OSD_FOCUS_SPONSOR_SUBMIT = "sponsor_submit"
         const val PLAYER_DOWN_KEY_OSD_FOCUS_ADVANCED = "advanced"
 
         private const val PLAYER_DOWN_KEY_OSD_FOCUS_RECOMMEND_LEGACY = "recommend"

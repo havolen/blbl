@@ -2073,7 +2073,6 @@ class PlayerActivity : BaseActivity() {
                 binding.btnCoin,
                 binding.btnFav,
                 binding.btnDetail,
-                binding.btnSponsorSubmit,
                 binding.btnAdvanced,
                 binding.btnClosePlayer,
             ),
@@ -2106,10 +2105,6 @@ class PlayerActivity : BaseActivity() {
         binding.btnListPanel.setOnClickListener {
             showListPanelFromButton()
             setControlsVisible(true)
-        }
-
-        binding.btnSponsorSubmit.setOnClickListener {
-            openSponsorSubmitPanel()
         }
 
         binding.btnDanmaku.setOnClickListener {
