@@ -319,6 +319,13 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         AccountPlatform.TENCENT -> binding.accountTencent
     }
 
+    private fun removeFor(platform: AccountPlatform): View = when (platform) {
+        AccountPlatform.BILIBILI -> binding.removeBilibili
+        AccountPlatform.IQIYI -> binding.removeIqiyi
+        AccountPlatform.MANGO -> binding.removeMango
+        AccountPlatform.TENCENT -> binding.removeTencent
+    }
+
     private fun launchLogin(platform: AccountPlatform) {
         if (platform == AccountPlatform.TENCENT) return
         val intent = when (platform) {
@@ -418,6 +425,10 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
                 cancelable = true,
                 actions = emptyList(),
                 autoFocus = true,
+                onRestoreFocus = {
+                    requestPlatformFocus(platform)
+                    true
+                },
                 onDismiss = {
                     if (dialogBinding?.root === b.root) {
                         dialogLoadJob?.cancel()
@@ -425,8 +436,6 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
                         dialogBinding = null
                         accountDialog = null
                         accountDialogPlatform = null
-                        val cell = _binding?.let { cellFor(platform) }
-                        cell?.post { if (isResumed && cell.isShown) cell.requestFocus() }
                     }
                 },
             )
@@ -582,6 +591,7 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         val dialogContext = requireActivity().userScaledContext()
         val view = LayoutInflater.from(dialogContext).inflate(R.layout.dialog_confirm_danger, null, false)
         view.findViewById<TextView>(R.id.tv_message).text = getString(R.string.account_logout_confirm_message)
+        var confirmed = false
         val handle =
             PopupHost.from(requireActivity() as androidx.activity.ComponentActivity).showModal(
                 title = getString(R.string.account_logout_confirm_title_fmt, platformTitle(platform)),
@@ -589,9 +599,14 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
                 cancelable = true,
                 actions = emptyList(),
                 autoFocus = true,
+                onRestoreFocus = {
+                    if (confirmed) requestPlatformFocus(platform) else requestRemoveFocus(platform)
+                    true
+                },
             )
         view.findViewById<View>(R.id.btn_cancel).setOnClickListener { handle.dismiss() }
         view.findViewById<View>(R.id.btn_confirm).setOnClickListener {
+            confirmed = true
             handle.dismiss()
             accountDialog?.dismiss()
             performLogout(platform)
@@ -626,10 +641,7 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
             AccountPlatform.TENCENT -> return
         }
         renderTable()
-        val cell = cellFor(platform)
-        cell.post {
-            if (isResumed && cell.isShown) cell.requestFocus()
-        }
+        requestPlatformFocus(platform)
     }
 
     private fun requestOverviewFocusIfNeeded() {
@@ -644,14 +656,25 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
     }
 
     private fun focusPlatform(platform: AccountPlatform) {
-        val b = _binding ?: return
-        val target = when (platform) {
-            AccountPlatform.BILIBILI -> b.accountBilibili
-            AccountPlatform.IQIYI -> b.accountIqiyi
-            AccountPlatform.MANGO -> b.accountMango
-            AccountPlatform.TENCENT -> b.accountTencent
+        requestPlatformFocus(platform)
+    }
+
+    private fun requestPlatformFocus(platform: AccountPlatform, attemptsLeft: Int = 24) {
+        val target = _binding?.let { cellFor(platform) } ?: return
+        target.post {
+            if (!isResumed || !target.isShown) return@post
+            if (target.requestFocus()) return@post
+            if (attemptsLeft > 0) target.postDelayed({ requestPlatformFocus(platform, attemptsLeft - 1) }, 32L)
         }
-        target.post { if (isResumed && target.isShown) target.requestFocus() }
+    }
+
+    private fun requestRemoveFocus(platform: AccountPlatform, attemptsLeft: Int = 24) {
+        val target = _binding?.let { removeFor(platform) } ?: return
+        target.post {
+            if (!isResumed || !target.isShown) return@post
+            if (target.requestFocus()) return@post
+            if (attemptsLeft > 0) target.postDelayed({ requestRemoveFocus(platform, attemptsLeft - 1) }, 32L)
+        }
     }
 
     private fun parseCoins(data: JSONObject?): Double {
