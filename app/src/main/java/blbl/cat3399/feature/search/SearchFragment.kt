@@ -83,11 +83,9 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
         super.onResume()
         renderer?.onResume()
         interactor?.renderInputPanelFromState()
-        binding.tvQuery.post {
-            val b = _binding ?: return@post
-            val visible = b.tvQuery.text?.toString().orEmpty()
-            if (visible != state.query) interactor?.setQuery(visible)
-        }
+        // View state restoration can re-apply an older EditText text after onResume.
+        // SearchState is authoritative, so refresh both the input and QR panel once more.
+        binding.tvQuery.post { interactor?.renderInputPanelFromState() }
         preparePhoneSearchPanel()
     }
 
