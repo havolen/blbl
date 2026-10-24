@@ -258,7 +258,7 @@ class IqiyiHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandl
                                 context = requireContext(),
                                 url = item.pageUrl,
                                 title = item.title,
-                                desktop = true,
+                                desktop = false,
                             ),
                         )
                     } else {
