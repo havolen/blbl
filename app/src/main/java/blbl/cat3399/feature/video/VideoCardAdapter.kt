@@ -348,7 +348,11 @@ class VideoCardAdapter(
                     } else {
                         ""
                     }
-            ImageLoader.loadInto(binding.ivCover, ImageUrl.cover(item.coverUrl))
+            ImageLoader.loadInto(
+                binding.ivCover,
+                ImageUrl.cover(item.coverUrl),
+                referer = if (item.bvid.startsWith("iqiyi:")) "https://www.iqiyi.com/" else null,
+            )
 
             applyOverlayTranslations()
             bindActionOverlay(

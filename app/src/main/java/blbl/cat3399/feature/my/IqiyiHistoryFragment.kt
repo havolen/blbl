@@ -30,6 +30,7 @@ import blbl.cat3399.core.ui.requestFocusAdapterPositionReliable
 import blbl.cat3399.databinding.FragmentVideoGridBinding
 import blbl.cat3399.feature.login.IqiyiLoginActivity
 import blbl.cat3399.feature.player.IqiyiPlayerActivity
+import blbl.cat3399.feature.player.IqiyiWebPlayerActivity
 import blbl.cat3399.feature.video.VideoCardAdapter
 import blbl.cat3399.ui.MainNavigationHost
 import blbl.cat3399.ui.RefreshKeyHandler
@@ -251,7 +252,17 @@ class IqiyiHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandl
             try {
                 val stream = IqiyiApi(sessionStore.cookies).resolveStream(item.tvId, item.videoId)
                 if (stream == null) {
-                    AppToast.show(requireContext(), getString(R.string.iqiyi_search_play_failed))
+                    if (item.pageUrl.isNotBlank()) {
+                        startActivity(
+                            IqiyiWebPlayerActivity.intent(
+                                context = requireContext(),
+                                url = item.pageUrl,
+                                title = item.title,
+                            ),
+                        )
+                    } else {
+                        AppToast.show(requireContext(), getString(R.string.iqiyi_search_play_failed))
+                    }
                     return@launch
                 }
                 startActivity(

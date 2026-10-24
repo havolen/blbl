@@ -17,6 +17,7 @@ import blbl.cat3399.core.ui.BaseActivity
 import blbl.cat3399.core.ui.Immersive
 import blbl.cat3399.databinding.ActivityIqiyiSearchBinding
 import blbl.cat3399.feature.player.IqiyiPlayerActivity
+import blbl.cat3399.feature.player.IqiyiWebPlayerActivity
 import blbl.cat3399.feature.video.VideoCardAdapter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -93,6 +94,16 @@ class IqiyiSearchActivity : BaseActivity() {
     private fun openItem(position: Int) {
         val item = items.getOrNull(position) ?: return
         if (resolving) return
+        if (item.isShortVideo && item.videoPageUrl.isNotBlank()) {
+            startActivity(
+                IqiyiWebPlayerActivity.intent(
+                    context = this,
+                    url = item.videoPageUrl,
+                    title = item.title,
+                ),
+            )
+            return
+        }
         resolving = true
         binding.progress.visibility = View.VISIBLE
         AppToast.show(this, getString(R.string.iqiyi_search_resolving))
@@ -100,7 +111,17 @@ class IqiyiSearchActivity : BaseActivity() {
             try {
                 val stream = playbackApi.resolveStream(item.tvId, item.videoId)
                 if (stream == null) {
-                    AppToast.show(this@IqiyiSearchActivity, getString(R.string.iqiyi_search_play_failed))
+                    if (item.videoPageUrl.isNotBlank()) {
+                        startActivity(
+                            IqiyiWebPlayerActivity.intent(
+                                context = this@IqiyiSearchActivity,
+                                url = item.videoPageUrl,
+                                title = item.title,
+                            ),
+                        )
+                    } else {
+                        AppToast.show(this@IqiyiSearchActivity, getString(R.string.iqiyi_search_play_failed))
+                    }
                     return@launch
                 }
                 startActivity(
@@ -114,7 +135,17 @@ class IqiyiSearchActivity : BaseActivity() {
                 throw cancelled
             } catch (error: Throwable) {
                 AppLog.w("IqiyiSearch", "resolve stream failed", error)
-                AppToast.show(this@IqiyiSearchActivity, getString(R.string.iqiyi_search_play_failed))
+                if (item.videoPageUrl.isNotBlank()) {
+                    startActivity(
+                        IqiyiWebPlayerActivity.intent(
+                            context = this@IqiyiSearchActivity,
+                            url = item.videoPageUrl,
+                            title = item.title,
+                        ),
+                    )
+                } else {
+                    AppToast.show(this@IqiyiSearchActivity, getString(R.string.iqiyi_search_play_failed))
+                }
             } finally {
                 resolving = false
                 binding.progress.visibility = View.GONE

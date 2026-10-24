@@ -27,7 +27,11 @@ object ImageLoader {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
 
-    fun loadInto(view: ImageView, url: String?) {
+    fun loadInto(
+        view: ImageView,
+        url: String?,
+        referer: String? = null,
+    ) {
         val normalized = normalizeImageUrl(url)
 
         if (normalized == null) {
@@ -63,7 +67,8 @@ object ImageLoader {
         if (view.drawable !== placeholder) view.setImageDrawable(placeholder)
         val job = scope.launch {
             try {
-                val bytes = withContext(Dispatchers.IO) { BiliClient.getBytes(normalized) }
+                val headers = if (referer.isNullOrBlank()) emptyMap() else mapOf("Referer" to referer)
+                val bytes = withContext(Dispatchers.IO) { BiliClient.getBytes(normalized, headers = headers) }
                 val bmp = withContext(Dispatchers.Default) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
                 if (bmp != null) {
                     cache.put(normalized, bmp)

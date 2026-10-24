@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <WebView
+        android:id="@+id/web_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:focusable="false"
+        android:focusableInTouchMode="false" />
+
+    <TextView
+        android:id="@+id/tv_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_player_controls"
+        android:ellipsize="end"
+        android:maxWidth="520dp"
+        android:maxLines="1"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="8dp"
+        android:textColor="@android:color/white"
+        android:textSize="15sp" />
+
+    <ProgressBar
+        android:id="@+id/progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminateTint="?attr/blblAccent" />
+
+    <TextView
+        android:id="@+id/btn_exit"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="24dp"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_player_osd_pill"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:minWidth="128dp"
+        android:paddingHorizontal="18dp"
+        android:stateListAnimator="@animator/blbl_focus_scale"
+        android:text="@string/iqiyi_player_exit"
+        android:textColor="@color/player_osd_icon_tint"
+        android:textSize="15sp" />
+</FrameLayout>

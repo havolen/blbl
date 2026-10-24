@@ -19,6 +19,8 @@ data class IqiyiSearchItem(
     val pageUrl: String,
     val tvId: Long,
     val videoId: String,
+    val videoPageUrl: String,
+    val isShortVideo: Boolean,
     val durationSec: Int,
 )
 
@@ -91,8 +93,10 @@ class IqiyiSearchApi(
                 subtitle = subtitle,
                 coverUrl = cover,
                 pageUrl = normalizeUrl(album.optString("albumLink").ifBlank { video.optString("itemLink") }),
+                videoPageUrl = normalizeUrl(video.optString("itemLink")),
                 tvId = tvId,
                 videoId = videoId,
+                isShortVideo = album.optInt("videoDocType", 0) == 2,
                 durationSec = video.optInt("timeLength", 0).coerceAtLeast(0),
             )
         }
