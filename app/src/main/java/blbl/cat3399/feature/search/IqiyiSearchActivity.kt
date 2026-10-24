@@ -134,6 +134,7 @@ class IqiyiSearchActivity : BaseActivity() {
                             context = this@IqiyiSearchActivity,
                             url = item.videoPageUrl,
                             title = item.title,
+                            desktop = true,
                         ),
                     )
                     return@launch
@@ -155,6 +156,7 @@ class IqiyiSearchActivity : BaseActivity() {
                             context = this@IqiyiSearchActivity,
                             url = item.videoPageUrl,
                             title = item.title,
+                            desktop = true,
                         ),
                     )
                 } else {

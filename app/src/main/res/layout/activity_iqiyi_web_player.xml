@@ -34,21 +34,17 @@
         android:layout_gravity="center"
         android:indeterminateTint="?attr/blblAccent" />
 
-    <TextView
-        android:id="@+id/btn_exit"
+    <LinearLayout
+        android:id="@+id/controls_row"
         android:layout_width="wrap_content"
-        android:layout_height="48dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
-        android:layout_marginStart="24dp"
-        android:layout_marginBottom="24dp"
-        android:background="@drawable/bg_player_osd_pill"
-        android:clickable="true"
-        android:focusable="true"
-        android:gravity="center"
-        android:minWidth="128dp"
-        android:paddingHorizontal="18dp"
-        android:stateListAnimator="@animator/blbl_focus_scale"
-        android:text="@string/iqiyi_player_exit"
-        android:textColor="@color/player_osd_icon_tint"
-        android:textSize="15sp" />
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_player_controls"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp" />
 </FrameLayout>
