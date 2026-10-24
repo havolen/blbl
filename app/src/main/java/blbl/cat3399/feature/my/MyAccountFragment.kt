@@ -77,6 +77,7 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
             if (result.resultCode == android.app.Activity.RESULT_OK) {
                 AppLog.d("My", "login returned platform=${platform.name.lowercase(Locale.ROOT)}")
             }
+            initSessions()
             refreshPlatforms()
             b.root.post { focusPlatform(platform) }
             accountDialogPlatform?.let { open -> if (open == platform && accountDialog?.isShowing == true) refreshDialog(platform) }
@@ -122,8 +123,6 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
     override fun onResume() {
         super.onResume()
         if (_binding == null) return
-        // Login activities write cookies through their own CookieStore instances.
-        initSessions()
         renderTable()
         refreshPlatforms()
         if (binding.personalContainer.visibility == View.VISIBLE) {
@@ -148,6 +147,8 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
     }
 
     private fun initSessions() {
+        mangoRefreshJob?.cancel()
+        iqiyiRefreshJob?.cancel()
         mangoSessionStore = MangoSessionStore(requireContext())
         mangoAccountApi = MangoAccountApi(mangoSessionStore)
         iqiyiSessionStore = IqiyiSessionStore(requireContext())
