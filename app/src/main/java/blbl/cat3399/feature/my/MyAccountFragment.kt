@@ -662,6 +662,7 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
     private fun requestOverviewFocusIfNeeded() {
         val b = _binding ?: return
         if (binding.personalContainer.visibility == View.VISIBLE) return
+        if (accountDialog?.isShowing == true) return
         if (b.root.findFocus() != null) return
         val target = b.root.findViewById<View>(lastActionId) ?: b.accountBilibili
         target.post {
