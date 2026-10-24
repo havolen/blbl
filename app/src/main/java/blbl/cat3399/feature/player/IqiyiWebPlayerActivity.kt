@@ -38,6 +38,7 @@ class IqiyiWebPlayerActivity : BaseActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var desktopMode = false
     private var controlsVisible = true
+    private val volumeBoost = PlayerVolumeBoost()
     private val hideControlsRunnable = Runnable { setControlsVisible(false) }
     private val playbackPoll =
         object : Runnable {
@@ -52,6 +53,7 @@ class IqiyiWebPlayerActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityIqiyiWebPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        volumeBoost.attach(0)
         Immersive.apply(this, BiliClient.prefs.fullscreenEnabled)
         window.decorView.keepScreenOn = true
 
@@ -326,6 +328,7 @@ class IqiyiWebPlayerActivity : BaseActivity() {
     }
 
     override fun onDestroy() {
+        volumeBoost.release()
         handler.removeCallbacks(playbackPoll)
         handler.removeCallbacks(hideControlsRunnable)
         binding.webView.stopLoading()

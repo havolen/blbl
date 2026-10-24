@@ -43,6 +43,7 @@ import org.json.JSONTokener
 /** Uses Mango's official PC player to retain its 1080p stream options and session-bound media pipeline. */
 class MangoVideoActivity : BaseActivity() {
     private lateinit var binding: ActivityMangoVideoBinding
+    private val volumeBoost = PlayerVolumeBoost()
     private val playerContext get() = binding.root.context
     private lateinit var chromeClient: WebChromeClient
     private var visibleCustomView: android.view.View? = null
@@ -105,6 +106,7 @@ class MangoVideoActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMangoVideoBinding.inflate(layoutInflater.cloneInUserScale(this))
         setContentView(binding.root)
+        volumeBoost.attach(0)
         Immersive.apply(this, blbl.cat3399.core.net.BiliClient.prefs.fullscreenEnabled)
         installPlaybackProgressBar()
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
@@ -286,6 +288,7 @@ class MangoVideoActivity : BaseActivity() {
     }
 
     override fun onDestroy() {
+        volumeBoost.release()
         episodeOverlay?.release()
         customViewCallback?.onCustomViewHidden()
         stopPlaybackProgressUpdates()

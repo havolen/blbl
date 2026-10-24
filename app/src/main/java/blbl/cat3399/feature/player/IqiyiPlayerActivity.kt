@@ -3,6 +3,7 @@
 package blbl.cat3399.feature.player
 
 import android.content.Context
+import android.media.AudioManager
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -54,6 +55,7 @@ class IqiyiPlayerActivity : BaseActivity() {
     private var resolvingNext = false
     private var controlsVisible = true
     private var speedHint: TextView? = null
+    private val volumeBoost = PlayerVolumeBoost()
     private val startedAtMs = SystemClock.elapsedRealtime()
     private var perfStatsCount = 0
     private val perfStats =
@@ -267,6 +269,9 @@ class IqiyiPlayerActivity : BaseActivity() {
                         },
                     )
                 }
+        val audioSessionId = (getSystemService(Context.AUDIO_SERVICE) as AudioManager).generateAudioSessionId()
+        exo.setAudioSessionId(audioSessionId)
+        volumeBoost.attach(audioSessionId)
         player = exo
         binding.playerView.player = exo
         binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
@@ -437,6 +442,7 @@ class IqiyiPlayerActivity : BaseActivity() {
     }
 
     override fun onDestroy() {
+        volumeBoost.release()
         seekController.release()
         progressLoopRunning = false
         handler.removeCallbacks(progressTicker)

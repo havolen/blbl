@@ -4,6 +4,7 @@ package blbl.cat3399.feature.player
 
 import android.app.Activity
 import android.content.Context
+import android.media.AudioManager
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -76,6 +77,7 @@ class MangoNativePlayerActivity : Activity() {
     private lateinit var danmakuToggle: DanmakuToggleButton
     private var debugInfoOverlay: TextView? = null
     private var speedHint: TextView? = null
+    private val volumeBoost = PlayerVolumeBoost()
     private var controlsHost: LinearLayout? = null
     private var controlsScroll: android.widget.HorizontalScrollView? = null
     private lateinit var bottomPanel: LinearLayout
@@ -583,6 +585,9 @@ class MangoNativePlayerActivity : Activity() {
                 )
             }
         player = ExoPlayer.Builder(this).setTrackSelector(trackSelector).build().also { exo ->
+            val audioSessionId = (getSystemService(Context.AUDIO_SERVICE) as AudioManager).generateAudioSessionId()
+            exo.setAudioSessionId(audioSessionId)
+            volumeBoost.attach(audioSessionId)
             exo.addListener(
                 object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
@@ -767,6 +772,7 @@ class MangoNativePlayerActivity : Activity() {
     }
 
     override fun onDestroy() {
+        volumeBoost.release()
         seekController.release()
         episodeOverlay?.release()
         catalogScope.cancel()
