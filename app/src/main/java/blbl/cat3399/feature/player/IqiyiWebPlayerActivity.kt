@@ -220,9 +220,31 @@ class IqiyiWebPlayerActivity : BaseActivity() {
         val meta =
             "<meta name=\"viewport\" content=\"width=1920, initial-scale=0.38, " +
                 "maximum-scale=0.38, user-scalable=no\">"
+        val style =
+            "<style id=\"blbl-desktop-style\">" +
+                "#areaLeftContainer{flex:1 1 100%!important;width:100%!important;max-width:none!important}" +
+                "#container1MainContent,#container1,#areaContainer,#skeleton{width:100%!important;" +
+                "max-width:none!important;overflow:visible!important}" +
+                "[class*=\"NavHeader_navHeaderNew\"],[class*=\"topbarXPlayer\"]," +
+                "[class*=\"configPage_configPageWrapper\"],[class*=\"configPage_configPage\"]," +
+                "[class*=\"danmaku\"],[class*=\"Danmaku\"]{display:none!important}" +
+                "#outlayer.iqp-player{position:fixed!important;inset:0!important;" +
+                "width:100vw!important;height:100vh!important;z-index:2147483647!important;" +
+                "background:#000!important;overflow:visible!important}" +
+                "#outlayer.iqp-player .iqp-player-videolayer,#outlayer.iqp-player video{" +
+                "width:100%!important;height:100%!important}" +
+                "#outlayer.iqp-player video{object-fit:contain!important}" +
+                ".iqp-player{overflow:visible!important}" +
+                "html,body{overflow:hidden!important;margin:0!important}" +
+                "</style>"
         val viewport = Regex("""<meta[^>]+name=["']viewport["'][^>]*>""", RegexOption.IGNORE_CASE)
-        if (viewport.containsMatchIn(html)) return viewport.replace(html, meta)
-        return html.replaceFirst("<head>", "<head>$meta", ignoreCase = true)
+        val styled =
+            if (viewport.containsMatchIn(html)) {
+                viewport.replace(html, meta + style)
+            } else {
+                html.replaceFirst("<head>", "<head>" + meta + style, ignoreCase = true)
+            }
+        return styled
     }
 
     private fun installIqiyiCookies() {
