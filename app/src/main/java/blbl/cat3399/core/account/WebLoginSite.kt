@@ -18,6 +18,8 @@ enum class WebLoginSite(
     val qrTriggerSelector: String? = null,
     /** Text fallback for the QR view switch. */
     val qrTriggerText: String? = null,
+    /** Selector that only exists once the QR view is actually visible. */
+    val qrReadySelector: String? = null,
     /** Optional second page to load after the first cookie appears (QQ OAuth authorization). */
     val secondaryUrl: String? = null,
     val secondaryCookie: String? = null,
@@ -39,6 +41,7 @@ enum class WebLoginSite(
         desktopUserAgent = true,
         qrTriggerSelector = ".view-type-qrcode",
         qrTriggerText = "扫码登录更安全",
+        qrReadySelector = ".qrcode-login",
     ),
     TENCENT(
         key = "tencent",
@@ -71,6 +74,7 @@ enum class WebLoginSite(
         cookieDomain = ".douyin.com",
         desktopUserAgent = true,
         qrTriggerText = "登录",
+        qrReadySelector = "#animate_qrcode_container img",
     ),
     ;
 

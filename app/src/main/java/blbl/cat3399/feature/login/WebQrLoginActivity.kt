@@ -130,7 +130,9 @@ class WebQrLoginActivity : BaseActivity() {
             handler.postDelayed(
                 {
                     if (completed || !pageFinished) return@postDelayed
-                    binding.webView.evaluateJavascript(triggerJs(), null)
+                    binding.webView.evaluateJavascript(triggerJs()) { result ->
+                        AppLog.d("WebQrLogin", "qr trigger ${site.key} result=$result")
+                    }
                 },
                 delay,
             )
@@ -140,14 +142,21 @@ class WebQrLoginActivity : BaseActivity() {
     private fun triggerJs(): String {
         val selector = JSONObject.quote(site.qrTriggerSelector.orEmpty())
         val text = JSONObject.quote(site.qrTriggerText.orEmpty())
+        val ready = JSONObject.quote(site.qrReadySelector.orEmpty())
         return """
             (function() {
-              if (window.__blblQrTriggered) return 'done';
+              var now = Date.now();
+              if (window.__blblLastQrClick && now - window.__blblLastQrClick < 2500) return 'cooldown';
+              function visible(el) {
+                return !!el && el.offsetParent !== null;
+              }
               function fire(el) {
                 ['mousedown', 'mouseup', 'click'].forEach(function(type) {
                   el.dispatchEvent(new MouseEvent(type, {bubbles: true, cancelable: true, view: window}));
                 });
               }
+              var readySelector = $ready;
+              if (readySelector && visible(document.querySelector(readySelector))) return 'already';
               var selector = $selector;
               var text = $text;
               var el = selector ? document.querySelector(selector) : null;
@@ -155,7 +164,7 @@ class WebQrLoginActivity : BaseActivity() {
                 var nodes = document.querySelectorAll('a,button,div,span,i');
                 for (var i = 0; i < nodes.length; i++) {
                   var node = nodes[i];
-                  if (node.offsetParent === null) continue;
+                  if (!visible(node)) continue;
                   var value = (node.textContent || '').trim();
                   if (value === text && node.children.length <= 2) {
                     el = node;
@@ -165,7 +174,8 @@ class WebQrLoginActivity : BaseActivity() {
               }
               if (!el) return 'none';
               fire(el);
-              window.__blblQrTriggered = true;
+              if (el.firstElementChild) fire(el.firstElementChild);
+              window.__blblLastQrClick = now;
               return 'clicked';
             })();
         """
