@@ -179,10 +179,10 @@ class IqiyiSearchActivity : BaseActivity() {
      * without re-querying the search API.
      */
     private fun nativePlaylist(current: IqiyiSearchItem): Pair<String?, Int> {
-        val nativeItems = items.filter { !it.isShortVideo && it.tvId > 0L && it.videoId.isNotBlank() }
-        if (nativeItems.size < 2) return null to 0
+        val episodes = current.episodes.filter { it.tvId > 0L && it.videoId.isNotBlank() }
+        if (episodes.size < 2) return null to 0
         val array = JSONArray()
-        nativeItems.forEach { entry ->
+        episodes.forEach { entry ->
             array.put(
                 JSONObject()
                     .put("tvId", entry.tvId)
@@ -190,7 +190,7 @@ class IqiyiSearchActivity : BaseActivity() {
                     .put("title", entry.title),
             )
         }
-        val index = nativeItems.indexOfFirst { it.tvId == current.tvId && it.videoId == current.videoId }
+        val index = episodes.indexOfFirst { it.videoId == current.videoId }
         return array.toString() to index.coerceAtLeast(0)
     }
 

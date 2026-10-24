@@ -12,6 +12,12 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
+data class IqiyiSearchEpisode(
+    val tvId: Long,
+    val videoId: String,
+    val title: String,
+)
+
 data class IqiyiSearchItem(
     val title: String,
     val subtitle: String,
@@ -22,6 +28,8 @@ data class IqiyiSearchItem(
     val videoPageUrl: String,
     val isShortVideo: Boolean,
     val durationSec: Int,
+    /** Episode list of the same album, used by the player's "next episode" button. */
+    val episodes: List<IqiyiSearchEpisode> = emptyList(),
 )
 
 /** Native grid data for iQiyi web search. */
@@ -88,6 +96,18 @@ class IqiyiSearchApi(
                     video.optString("itemVImage").ifBlank { album.optString("albumImg") }
                 },
             )
+            val episodes = ArrayList<IqiyiSearchEpisode>(videos?.length() ?: 0)
+            for (j in 0 until (videos?.length() ?: 0)) {
+                val episode = videos?.optJSONObject(j) ?: continue
+                val episodeTvId = episode.optLong("tvId", 0L).takeIf { it > 0L } ?: continue
+                val episodeVideoId = episode.optString("vid", "").trim()
+                if (episodeVideoId.isBlank()) continue
+                episodes += IqiyiSearchEpisode(
+                    tvId = episodeTvId,
+                    videoId = episodeVideoId,
+                    title = clean(episode.optString("itemTitle")).ifBlank { title },
+                )
+            }
             out += IqiyiSearchItem(
                 title = title,
                 subtitle = subtitle,
@@ -98,6 +118,7 @@ class IqiyiSearchApi(
                 videoId = videoId,
                 isShortVideo = album.optInt("videoDocType", 0) == 2,
                 durationSec = video.optInt("timeLength", 0).coerceAtLeast(0),
+                episodes = episodes,
             )
         }
         out

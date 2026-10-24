@@ -110,6 +110,17 @@ class WebQrLoginActivity : BaseActivity() {
             }
         binding.webView.loadUrl(site.loginUrl)
         handler.postDelayed(cookiePoll, COOKIE_POLL_INTERVAL_MS)
+        handler.postDelayed({ reportBlankPageIfNeeded() }, BLANK_PAGE_CHECK_DELAY_MS)
+    }
+
+    private fun reportBlankPageIfNeeded() {
+        if (completed || !pageFinished) return
+        binding.webView.evaluateJavascript("(document.body ? document.body.innerText.length : 0)") { value ->
+            val length = value?.trim()?.toIntOrNull() ?: 0
+            if (!completed && length < 10) {
+                binding.tvStatus.text = "页面未能渲染，可能是设备 WebView 版本过低（当前 66），请更新 WebView 或换设备重试"
+            }
+        }
     }
 
     private fun reload() {
@@ -274,6 +285,7 @@ class WebQrLoginActivity : BaseActivity() {
         const val EXTRA_SITE = "web_login_site"
         private const val COOKIE_POLL_INTERVAL_MS = 1_500L
         private const val FINISH_DELAY_MS = 900L
+        private const val BLANK_PAGE_CHECK_DELAY_MS = 20_000L
         private const val DESKTOP_UA =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"

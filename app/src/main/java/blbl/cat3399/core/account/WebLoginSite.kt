@@ -68,13 +68,15 @@ enum class WebLoginSite(
     DOUYIN(
         key = "douyin",
         title = "抖音",
-        loginUrl = "https://www.douyin.com/",
+        // The desktop SPA needs a newer WebView than Android 9 TVs ship with; the passport
+        // page is the lightest official page and shows the QR block directly on mobile UAs.
+        loginUrl = "https://sso.douyin.com/login/",
         cookieUrls = listOf("https://www.douyin.com/", "https://sso.douyin.com/"),
         requiredCookies = listOf("sessionid", "sessionid_ss"),
         cookieDomain = ".douyin.com",
-        desktopUserAgent = true,
-        qrTriggerText = "登录",
-        qrReadySelector = "#animate_qrcode_container img",
+        desktopUserAgent = false,
+        qrTriggerText = null,
+        qrReadySelector = null,
     ),
     ;
 
