@@ -10,6 +10,7 @@ import blbl.cat3399.R
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.model.BangumiSeason
 import blbl.cat3399.core.ui.FocusTreeUtils
+import blbl.cat3399.core.ui.QrCodeBitmap
 import blbl.cat3399.databinding.FragmentSearchBinding
 import blbl.cat3399.feature.my.BangumiDetailActivity
 import blbl.cat3399.feature.video.removeVideoCardAndRestoreFocus
@@ -25,6 +26,8 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
     private lateinit var adapters: SearchAdapters
     private var renderer: SearchRenderer? = null
     private var interactor: SearchInteractor? = null
+    private var phoneSearchServer: PhoneSearchServer? = null
+    private var phoneUrl: String? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSearchBinding.inflate(inflater, container, false)
@@ -44,6 +47,7 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
         renderer.setupInput()
         renderer.setupResults()
         renderer.applyUiScale()
+        preparePhoneSearchPanel()
         interactor.loadHotAndDefault()
         interactor.scheduleMiddleList(state.query)
 
@@ -53,7 +57,7 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
             renderer.showInput()
         }
         if (savedInstanceState == null) {
-            renderer.focusFirstKey()
+            renderer.focusInitialInput()
         }
     }
 
@@ -66,7 +70,7 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
         AppLog.d("Back", "SearchFragment handleBackPressed resultsVisible=$resultsVisible")
         return if (resultsVisible) {
             r.showInput()
-            r.focusFirstKey()
+            r.focusInitialInput()
             true
         } else {
             // Search (input panel) behaves like Dynamic: Back in page content returns to the sidebar.
@@ -78,6 +82,7 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
         super.onResume()
         renderer?.onResume()
         interactor?.renderInputPanelFromState()
+        preparePhoneSearchPanel()
     }
 
     override fun onHiddenChanged(hidden: Boolean) {
@@ -99,6 +104,9 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
     }
 
     override fun onDestroyView() {
+        phoneSearchServer?.stop()
+        phoneSearchServer = null
+        phoneUrl = null
         interactor?.release()
         interactor = null
         renderer?.release()
@@ -123,6 +131,62 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
 
     internal fun onSearchKeywordClicked(keyword: String) {
         interactor?.onKeywordClicked(keyword)
+    }
+
+    internal fun openMangoSearch() {
+        openMangoSearch(state.query)
+    }
+
+    internal fun openMangoSearch(keyword: String) {
+        val query = keyword.trim()
+        if (query.isBlank() || !isAdded) return
+        startActivity(
+            Intent(requireContext(), MangoSearchActivity::class.java)
+                .putExtra(MangoSearchActivity.EXTRA_QUERY, query),
+        )
+    }
+
+    /** Starts the LAN input server and binds it to the always-visible QR panel. */
+    internal fun preparePhoneSearchPanel() {
+        val b = _binding ?: return
+        val server = phoneSearchServer ?: PhoneSearchServer().also { phoneSearchServer = it }
+        val url = server.start()
+        if (url.isNullOrBlank()) {
+            b.ivPhoneQr.setImageDrawable(null)
+            b.tvPhoneUrl.text = ""
+            b.tvPhoneHint.setText(R.string.search_phone_start_failed)
+            return
+        }
+        if (phoneUrl != url) {
+            phoneUrl = url
+            val sizePx = (resources.displayMetrics.density * 220f).toInt().coerceAtLeast(1)
+            b.ivPhoneQr.setImageBitmap(QrCodeBitmap.encode(url, sizePx))
+            b.ivPhoneQr.contentDescription = getString(R.string.search_phone_title)
+            b.tvPhoneUrl.text = getString(R.string.search_phone_url, url)
+        }
+        b.tvPhoneHint.setText(R.string.search_phone_hint)
+        b.tvPhoneQuery.text =
+            getString(
+                R.string.search_phone_query,
+                state.query.ifBlank { getString(R.string.search_phone_empty) },
+            )
+
+        server.onQueryChanged = { text ->
+            activity?.runOnUiThread {
+                if (!isAdded) return@runOnUiThread
+                interactor?.setQuery(text)
+            }
+        }
+        server.onSearchRequested = { engine, text ->
+            activity?.runOnUiThread {
+                if (!isAdded || !isResumed) return@runOnUiThread
+                interactor?.setQuery(text)
+                when (engine) {
+                    PhoneSearchServer.Engine.BILI -> interactor?.performSearch()
+                    PhoneSearchServer.Engine.MANGO -> openMangoSearch(text)
+                }
+            }
+        }
     }
 
     internal fun removeSearchHistoryAndRestoreFocus(keyword: String, position: Int) {

@@ -1,5 +1,6 @@
 package blbl.cat3399.feature.my
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -14,12 +15,14 @@ import androidx.lifecycle.repeatOnLifecycle
 import blbl.cat3399.R
 import blbl.cat3399.core.account.AccountAvatar
 import blbl.cat3399.core.account.BiliSession
+import blbl.cat3399.core.account.MangoSessionStore
 import blbl.cat3399.core.image.ImageLoader
 import blbl.cat3399.core.image.ImageUrl
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.navigation.MainNavigationKeys
 import blbl.cat3399.core.ui.TabContentSwitchFocusHost
 import blbl.cat3399.databinding.FragmentMyAccountBinding
+import blbl.cat3399.feature.login.MangoLoginActivity
 import blbl.cat3399.ui.BackPressHandler
 import blbl.cat3399.ui.MainNavigationHost
 import kotlinx.coroutines.launch
@@ -30,6 +33,7 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
     private val binding get() = _binding!!
     private var lastActionId = R.id.btn_history
     private var personalFocusRequestToken = 0
+    private lateinit var mangoSessionStore: MangoSessionStore
     private val backStackListener = FragmentManager.OnBackStackChangedListener { updateVisibility() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,6 +47,7 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        mangoSessionStore = MangoSessionStore(requireContext())
         // Older saved focus ids may point at the removed Settings/About actions.
         if (view.findViewById<View>(lastActionId) == null) lastActionId = R.id.btn_account
         val actions = listOf(
@@ -55,6 +60,9 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         )
         actions.forEach { (button, key) -> button.setOnClickListener { openPersonal(key) } }
         binding.btnAccount.setOnClickListener { (activity as? MainNavigationHost)?.openAccountDetails() }
+        binding.btnMangoAccount.setOnClickListener {
+            startActivity(Intent(requireContext(), MangoLoginActivity::class.java))
+        }
         actions.forEach { (button, _) ->
             button.setOnFocusChangeListener { _, focused -> if (focused) lastActionId = button.id }
         }
@@ -67,6 +75,14 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
             binding.accountArrow.isSelected = focused
             binding.avatar.isSelected = focused
         }
+        binding.btnMangoAccount.setOnFocusChangeListener { _, focused ->
+            if (focused) lastActionId = binding.btnMangoAccount.id
+            binding.btnMangoAccount.isSelected = focused
+            binding.mangoAccountName.isSelected = focused
+            binding.mangoAccountStatus.isSelected = focused
+            binding.mangoAccountAction.isSelected = focused
+            binding.mangoAccountArrow.isSelected = focused
+        }
         childFragmentManager.addOnBackStackChangedListener(backStackListener)
         updateVisibility()
         if (binding.personalContainer.visibility == View.VISIBLE) {
@@ -77,6 +93,25 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
                 BiliSession.state.collect { renderAccount(it) }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null) {
+            // The login Activity writes cookies through its own CookieStore instance.
+            mangoSessionStore = MangoSessionStore(requireContext())
+            renderMangoAccount()
+        }
+    }
+
+    private fun renderMangoAccount() {
+        val b = _binding ?: return
+        val account = mangoSessionStore.currentAccount()
+        b.mangoAccountName.text = getString(R.string.mango_account_title)
+        b.mangoAccountStatus.text = account?.username ?: getString(R.string.mango_account_logged_out)
+        b.mangoAccountAction.text = getString(
+            if (account == null) R.string.mango_account_action_login else R.string.mango_account_action_manage,
+        )
     }
 
     private fun renderAccount(session: BiliSession.State) {

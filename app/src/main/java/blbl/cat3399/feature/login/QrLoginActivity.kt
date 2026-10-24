@@ -1,6 +1,5 @@
 package blbl.cat3399.feature.login
 
-import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.lifecycle.lifecycleScope
@@ -12,12 +11,9 @@ import blbl.cat3399.core.prefs.BiliAppAuthSession
 import blbl.cat3399.core.net.WebCookieMaintainer
 import blbl.cat3399.core.ui.BaseActivity
 import blbl.cat3399.core.ui.Immersive
+import blbl.cat3399.core.ui.QrCodeBitmap
 import blbl.cat3399.core.ui.cloneInUserScale
 import blbl.cat3399.databinding.ActivityQrLoginBinding
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.EncodeHintType
-import com.google.zxing.MultiFormatWriter
-import com.google.zxing.common.BitMatrix
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -139,7 +135,7 @@ class QrLoginActivity : BaseActivity() {
                 AppLog.i("QrLogin", "QR code generated")
                 val qrSizePx = targetQrSizePx()
                 binding.tvDebug.text = ""
-                val bmp = withContext(Dispatchers.Default) { makeQr(url, qrSizePx) }
+                val bmp = withContext(Dispatchers.Default) { QrCodeBitmap.encode(url, qrSizePx) }
                 binding.ivQr.setImageBitmap(bmp)
                 binding.tvStatus.text = "请使用哔哩哔哩 App 扫码并确认登录"
                 poll(authCode)
@@ -270,21 +266,6 @@ class QrLoginActivity : BaseActivity() {
         }
     }
 
-
-    private fun makeQr(text: String, size: Int): Bitmap {
-        val hints = mapOf(EncodeHintType.MARGIN to 0)
-        val matrix: BitMatrix = MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, size, size, hints)
-        val pixels = IntArray(size * size)
-        for (y in 0 until size) {
-            val offset = y * size
-            for (x in 0 until size) {
-                pixels[offset + x] = if (matrix.get(x, y)) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
-            }
-        }
-        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        bmp.setPixels(pixels, 0, size, 0, 0, size, size)
-        return bmp
-    }
 
     private fun isNavKey(keyCode: Int): Boolean {
         return when (keyCode) {

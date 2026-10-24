@@ -9,6 +9,8 @@ class SearchState {
     var suggestKeywords: List<String> = emptyList()
     var hotKeywords: List<String> = emptyList()
     var resultsVisible: Boolean = false
+    /** false = QR panel, true = on-screen keyboard. */
+    var keyboardVisible: Boolean = false
 
     var ignoreQueryTextChanges: Boolean = false
 

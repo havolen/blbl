@@ -120,13 +120,13 @@
             android:id="@+id/btn_back"
             android:layout_width="@dimen/player_top_button_size"
             android:layout_height="@dimen/player_top_button_size"
-            android:background="?attr/blblFocusBgRound"
+            android:background="@drawable/bg_player_osd_pill"
             android:focusable="false"
             android:focusableInTouchMode="false"
             android:padding="@dimen/player_top_button_padding"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_back"
-            app:tint="@color/player_button_tint"
+            app:tint="@color/player_osd_icon_tint"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -255,12 +255,12 @@
             android:id="@+id/btn_settings"
             android:layout_width="@dimen/player_top_button_size"
             android:layout_height="@dimen/player_top_button_size"
-            android:background="?attr/blblFocusBgRound"
+            android:background="@drawable/bg_player_osd_pill"
             android:focusable="true"
             android:padding="@dimen/player_top_button_padding"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_settings"
-            app:tint="@color/player_button_tint"
+            app:tint="@color/player_osd_icon_tint"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="@id/btn_back"
             app:layout_constraintEnd_toStartOf="@id/tv_clock"
@@ -392,204 +392,217 @@
 
             <ImageButton
                 android:id="@+id/btn_prev"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
+                android:background="@drawable/bg_player_osd_pill"
                 android:contentDescription="@string/app_name"
                 android:focusable="true"
                 android:padding="?attr/playerOsdPadTransport"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_player_prev"
-                app:tint="@color/player_button_tint"
+                app:tint="@color/player_osd_icon_tint"
                 android:visibility="gone" />
-
             <ImageButton
                 android:id="@+id/btn_play_pause"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
-                android:contentDescription="@string/app_name"
-            android:focusable="true"
-            android:padding="?attr/playerOsdPadTransport"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_player_play"
-            app:tint="@color/player_button_tint" />
-
+                android:background="@drawable/bg_player_osd_pill"
+                android:contentDescription="@string/player_btn_play_pause"
+                android:tooltipText="@string/player_btn_play_pause"
+                android:focusable="true"
+                android:padding="?attr/playerOsdPadTransport"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_player_play"
+                app:tint="@color/player_osd_icon_tint" />
             <ImageButton
                 android:id="@+id/btn_next"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
-                android:contentDescription="@string/app_name"
-            android:focusable="true"
-            android:padding="?attr/playerOsdPadTransport"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_player_next"
-            app:tint="@color/player_button_tint" />
-
-            <ImageButton
-                android:id="@+id/btn_subtitle"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
-                android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
+                android:background="@drawable/bg_player_osd_pill"
+                android:contentDescription="@string/player_btn_next"
+                android:tooltipText="@string/player_btn_next"
                 android:focusable="true"
-            android:padding="?attr/playerOsdPadNormal"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_player_subtitle"
-            app:tint="@color/player_button_tint"
-            android:contentDescription="@string/player_btn_subtitle" />
-
+                android:padding="?attr/playerOsdPadTransport"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_player_next"
+                app:tint="@color/player_osd_icon_tint" />
+            <ImageButton
+                android:id="@+id/btn_list_panel"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
+                android:layout_marginEnd="?attr/playerOsdGap"
+                android:background="@drawable/bg_player_osd_pill"
+                android:contentDescription="@string/player_btn_playlist"
+                android:tooltipText="@string/player_btn_playlist"
+                android:focusable="true"
+                android:padding="?attr/playerOsdPadSmall"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_player_playlist"
+                app:tint="@color/player_osd_icon_tint" />
             <ImageButton
                 android:id="@+id/btn_danmaku"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
-                android:contentDescription="@string/app_name"
+                android:background="@drawable/bg_player_osd_pill"
+                android:contentDescription="@string/player_btn_danmaku"
+                android:tooltipText="@string/player_btn_danmaku"
                 android:focusable="true"
                 android:padding="?attr/playerOsdPadNormal"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_player_danmaku"
-                />
+                app:tint="@color/player_osd_icon_tint" />
 
             <ImageButton
-                android:id="@+id/btn_comments"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:id="@+id/btn_replay_10"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
-                android:contentDescription="@string/player_btn_comments"
+                android:background="@drawable/bg_player_osd_pill"
+                android:contentDescription="@string/player_btn_replay_10"
                 android:focusable="true"
-                android:padding="?attr/playerOsdPadNormal"
+                android:padding="?attr/playerOsdPadSmall"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_comment"
-                app:tint="@color/player_button_tint" />
+                android:src="@drawable/ic_player_replay_10"
+                app:tint="@color/player_osd_icon_tint" />
+
+            <ImageButton
+                android:id="@+id/btn_forward_10"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
+                android:layout_marginEnd="?attr/playerOsdGap"
+                android:background="@drawable/bg_player_osd_pill"
+                android:contentDescription="@string/player_btn_forward_10"
+                android:focusable="true"
+                android:padding="?attr/playerOsdPadSmall"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_player_forward_10"
+                app:tint="@color/player_osd_icon_tint" />
+
+            <ImageButton
+                android:id="@+id/btn_subtitle"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
+                android:layout_marginEnd="?attr/playerOsdGap"
+                android:background="@drawable/bg_player_osd_pill"
+                android:focusable="true"
+            android:padding="?attr/playerOsdPadNormal"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_player_subtitle"
+            app:tint="@color/player_osd_icon_tint"
+            android:contentDescription="@string/player_btn_subtitle" />
 
             <ImageButton
                 android:id="@+id/btn_up"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
+                android:background="@drawable/bg_player_osd_pill"
                 android:contentDescription="@string/app_name"
                 android:focusable="true"
             android:padding="?attr/playerOsdPadNormal"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_player_up"
-            app:tint="@color/player_button_tint" />
+            app:tint="@color/player_osd_icon_tint" />
 
             <blbl.cat3399.feature.player.HoldProgressImageButton
                 android:id="@+id/btn_like"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
+                android:background="@drawable/bg_player_osd_pill"
                 android:contentDescription="@string/app_name"
                 android:focusable="true"
             android:padding="?attr/playerOsdPadSmall"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_action_like"
-            app:tint="@color/player_button_tint"
+            app:tint="@color/player_osd_icon_tint"
             android:visibility="gone" />
 
             <ImageButton
                 android:id="@+id/btn_coin"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
+                android:background="@drawable/bg_player_osd_pill"
                 android:contentDescription="@string/app_name"
                 android:focusable="true"
             android:padding="?attr/playerOsdPadSmall"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_action_coin"
-            app:tint="@color/player_button_tint"
+            app:tint="@color/player_osd_icon_tint"
             android:visibility="gone" />
 
             <ImageButton
                 android:id="@+id/btn_fav"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
+                android:background="@drawable/bg_player_osd_pill"
                 android:contentDescription="@string/app_name"
                 android:focusable="true"
             android:padding="?attr/playerOsdPadSmall"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_action_fav"
-                app:tint="@color/player_button_tint"
+                app:tint="@color/player_osd_icon_tint"
                 android:visibility="gone" />
 
             <ImageButton
-                android:id="@+id/btn_list_panel"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
-                android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
-                android:contentDescription="@string/player_btn_list_panel"
-                android:focusable="true"
-                android:padding="?attr/playerOsdPadSmall"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_chevron_down"
-                app:tint="@color/player_button_tint" />
-
-            <ImageButton
                 android:id="@+id/btn_detail"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
+                android:background="@drawable/bg_player_osd_pill"
                 android:contentDescription="@string/player_btn_detail"
                 android:focusable="true"
                 android:padding="?attr/playerOsdPadSmall"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_player_detail"
-                app:tint="@color/player_button_tint"
+                app:tint="@color/player_osd_icon_tint"
                 android:visibility="gone" />
 
             <ImageButton
                 android:id="@+id/btn_sponsor_submit"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
+                android:background="@drawable/bg_player_osd_pill"
                 android:contentDescription="@string/player_btn_sponsor_submit"
                 android:focusable="true"
                 android:padding="?attr/playerOsdPadSmall"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_player_upload"
                 android:visibility="gone"
-                app:tint="@color/player_button_tint" />
+                app:tint="@color/player_osd_icon_tint" />
 
             <ImageButton
                 android:id="@+id/btn_advanced"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
                 android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="?attr/blblFocusBgRound"
+                android:background="@drawable/bg_player_osd_pill"
                 android:contentDescription="@string/app_name"
                 android:focusable="true"
             android:padding="?attr/playerOsdPadSmall"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_settings"
-            app:tint="@color/player_button_tint" />
+            app:tint="@color/player_osd_icon_tint" />
 
             <ImageButton
                 android:id="@+id/btn_close_player"
-                android:layout_width="?attr/playerOsdButtonTargetSize"
-                android:layout_height="?attr/playerOsdButtonTargetSize"
-                android:background="?attr/blblFocusBgRound"
+                android:layout_width="?attr/playerOsdButtonWidth"
+                android:layout_height="?attr/playerOsdButtonHeight"
+                android:background="@drawable/bg_player_osd_pill"
                 android:contentDescription="@string/player_btn_close_player"
                 android:focusable="true"
                 android:padding="?attr/playerOsdPadSmall"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_player_close"
                 android:visibility="gone"
-                app:tint="@color/player_button_tint" />
+                app:tint="@color/player_osd_icon_tint" />
         </LinearLayout>
 
         <TextView

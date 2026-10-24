@@ -146,6 +146,7 @@ class MyHistoryFragment : Fragment(), MyTabSwitchFocusTarget, RefreshKeyHandler 
                 callbacks =
                     object : DpadGridController.Callbacks {
                         override fun onTopEdge(): Boolean {
+                            if ((parentFragment as? MyHistoryHostFragment)?.requestSourceButtonFocus() == true) return true
                             focusSelectedMyTabIfAvailable()
                             return true
                         }

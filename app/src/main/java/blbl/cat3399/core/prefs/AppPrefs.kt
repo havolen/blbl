@@ -141,6 +141,17 @@ class AppPrefs(context: Context) {
             prefs.edit().putStringSet(KEY_TOP_NAVIGATION_VISIBLE_KEYS, MainNavigationKeys.all.filter { it in selected }.toSet()).apply()
         }
 
+    /** History data source selected inside the shared History page. */
+    var historySource: String
+        get() = prefs.getString(KEY_HISTORY_SOURCE, HISTORY_SOURCE_BILIBILI)
+            ?.takeIf { it == HISTORY_SOURCE_MANGO }
+            ?: HISTORY_SOURCE_BILIBILI
+        set(value) {
+            if (value == HISTORY_SOURCE_BILIBILI || value == HISTORY_SOURCE_MANGO) {
+                prefs.edit().putString(KEY_HISTORY_SOURCE, value).apply()
+            }
+        }
+
     fun setTopNavigationItemVisible(key: String, visible: Boolean): Boolean {
         if (key !in MainNavigationKeys.all) return false
         val selected = topNavigationVisibleKeys.toMutableSet()
@@ -726,7 +737,6 @@ class AppPrefs(context: Context) {
                 PLAYER_DOWN_KEY_OSD_FOCUS_NEXT,
                 PLAYER_DOWN_KEY_OSD_FOCUS_SUBTITLE,
                 PLAYER_DOWN_KEY_OSD_FOCUS_DANMAKU,
-                PLAYER_DOWN_KEY_OSD_FOCUS_COMMENTS,
                 PLAYER_DOWN_KEY_OSD_FOCUS_DETAIL,
                 PLAYER_DOWN_KEY_OSD_FOCUS_UP,
                 PLAYER_DOWN_KEY_OSD_FOCUS_LIKE,
@@ -748,7 +758,6 @@ class AppPrefs(context: Context) {
                     PLAYER_DOWN_KEY_OSD_FOCUS_NEXT,
                     PLAYER_DOWN_KEY_OSD_FOCUS_SUBTITLE,
                     PLAYER_DOWN_KEY_OSD_FOCUS_DANMAKU,
-                    PLAYER_DOWN_KEY_OSD_FOCUS_COMMENTS,
                     PLAYER_DOWN_KEY_OSD_FOCUS_DETAIL,
                     PLAYER_DOWN_KEY_OSD_FOCUS_UP,
                     PLAYER_DOWN_KEY_OSD_FOCUS_LIKE,
@@ -1080,6 +1089,9 @@ class AppPrefs(context: Context) {
         const val MAIN_BACK_FOCUS_SCHEME_B = "B"
         const val MAIN_BACK_FOCUS_SCHEME_C = "C"
 
+        const val HISTORY_SOURCE_BILIBILI = "bilibili"
+        const val HISTORY_SOURCE_MANGO = "mango"
+
         const val VIDEO_CARD_LONG_PRESS_ACTION_MANUAL = "manual"
         const val VIDEO_CARD_LONG_PRESS_ACTION_WATCH_LATER = "watch_later"
         const val VIDEO_CARD_LONG_PRESS_ACTION_OPEN_DETAIL = "open_detail"
@@ -1110,6 +1122,7 @@ class AppPrefs(context: Context) {
         private const val KEY_MAIN_LIVE_VISIBLE_TABS = "main_live_visible_tabs"
         private const val KEY_MAIN_MY_VISIBLE_TABS = "main_my_visible_tabs"
         private const val KEY_TOP_NAVIGATION_VISIBLE_KEYS = "top_navigation_visible_keys"
+        private const val KEY_HISTORY_SOURCE = "my_history_source"
         private const val KEY_FOLLOWING_LIST_ORDER = "following_list_order"
         private const val KEY_DYNAMIC_FOLLOWING_RECENT_UPDATE_DOT_ENABLED = "dynamic_following_recent_update_dot_enabled"
         private const val KEY_AUTO_UPDATE_CHECK_ENABLED = "auto_update_check_enabled"
@@ -1325,9 +1338,10 @@ class AppPrefs(context: Context) {
         const val PLAYER_OSD_BTN_PREV = "prev"
         const val PLAYER_OSD_BTN_PLAY_PAUSE = "play_pause"
         const val PLAYER_OSD_BTN_NEXT = "next"
+        const val PLAYER_OSD_BTN_REPLAY_10 = "replay_10"
+        const val PLAYER_OSD_BTN_FORWARD_10 = "forward_10"
         const val PLAYER_OSD_BTN_SUBTITLE = "subtitle"
         const val PLAYER_OSD_BTN_DANMAKU = "danmaku"
-        const val PLAYER_OSD_BTN_COMMENTS = "comments"
         const val PLAYER_OSD_BTN_DETAIL = "detail"
         const val PLAYER_OSD_BTN_UP = "up"
         const val PLAYER_OSD_BTN_LIKE = "like"
@@ -1342,13 +1356,14 @@ class AppPrefs(context: Context) {
             listOf(
                 PLAYER_OSD_BTN_PLAY_PAUSE,
                 PLAYER_OSD_BTN_NEXT,
-                PLAYER_OSD_BTN_SUBTITLE,
+                PLAYER_OSD_BTN_LIST_PANEL,
                 PLAYER_OSD_BTN_DANMAKU,
-                PLAYER_OSD_BTN_COMMENTS,
+                PLAYER_OSD_BTN_REPLAY_10,
+                PLAYER_OSD_BTN_FORWARD_10,
+                PLAYER_OSD_BTN_SUBTITLE,
                 PLAYER_OSD_BTN_DETAIL,
                 PLAYER_OSD_BTN_SPONSOR_SUBMIT,
                 PLAYER_OSD_BTN_UP,
-                PLAYER_OSD_BTN_LIST_PANEL,
                 PLAYER_OSD_BTN_ADVANCED,
                 PLAYER_OSD_BTN_CLOSE_PLAYER,
             )
@@ -1358,9 +1373,10 @@ class AppPrefs(context: Context) {
                 PLAYER_OSD_BTN_PREV,
                 PLAYER_OSD_BTN_PLAY_PAUSE,
                 PLAYER_OSD_BTN_NEXT,
+                PLAYER_OSD_BTN_REPLAY_10,
+                PLAYER_OSD_BTN_FORWARD_10,
                 PLAYER_OSD_BTN_SUBTITLE,
                 PLAYER_OSD_BTN_DANMAKU,
-                PLAYER_OSD_BTN_COMMENTS,
                 PLAYER_OSD_BTN_DETAIL,
                 PLAYER_OSD_BTN_UP,
                 PLAYER_OSD_BTN_LIKE,
@@ -1377,7 +1393,6 @@ class AppPrefs(context: Context) {
         const val PLAYER_DOWN_KEY_OSD_FOCUS_NEXT = "next"
         const val PLAYER_DOWN_KEY_OSD_FOCUS_SUBTITLE = "subtitle"
         const val PLAYER_DOWN_KEY_OSD_FOCUS_DANMAKU = "danmaku"
-        const val PLAYER_DOWN_KEY_OSD_FOCUS_COMMENTS = "comments"
         const val PLAYER_DOWN_KEY_OSD_FOCUS_DETAIL = "detail"
         const val PLAYER_DOWN_KEY_OSD_FOCUS_UP = "up"
         const val PLAYER_DOWN_KEY_OSD_FOCUS_LIKE = "like"

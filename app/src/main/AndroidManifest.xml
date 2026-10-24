@@ -46,6 +46,24 @@
 	            android:name=".feature.login.QrLoginActivity"
 	            android:screenOrientation="sensorLandscape" />
 	        <activity
+	            android:name=".feature.login.MangoLoginActivity"
+	            android:exported="false"
+	            android:screenOrientation="sensorLandscape" />
+	        <activity
+	            android:name=".feature.player.MangoNativePlayerActivity"
+	            android:configChanges="keyboardHidden|orientation|screenSize"
+	            android:exported="false"
+	            android:screenOrientation="landscape"
+	            android:theme="@android:style/Theme.Material.NoActionBar" />
+	        <activity
+	            android:name=".feature.player.MangoVideoActivity"
+	            android:exported="false"
+	            android:screenOrientation="sensorLandscape" />
+	        <activity
+	            android:name=".feature.search.MangoSearchActivity"
+	            android:exported="false"
+	            android:screenOrientation="sensorLandscape" />
+	        <activity
 	            android:name=".feature.following.FollowingListActivity"
 	            android:screenOrientation="sensorLandscape" />
         <activity

@@ -178,6 +178,10 @@ class MainActivity : BaseActivity(), MainNavigationHost {
                 }
             },
             onFocus = { item ->
+                AppLog.d(
+                    "NavFocus",
+                    "focused key=${item.key} selected=$currentTopNavKey sidebar=$sidebarExpanded follow=${BiliClient.prefs.tabSwitchFollowsFocus}",
+                )
                 navigateOnFocus(item.key)
             },
         )
@@ -471,18 +475,38 @@ class MainActivity : BaseActivity(), MainNavigationHost {
     }
 
     private fun moveSidebarFocus(focused: View, direction: Int): Boolean {
-        val holder = binding.recyclerTopNav.findContainingViewHolder(focused) ?: return true
-        val count = navAdapter.itemCount
-        if (count == 0) return true
-        val target = (holder.bindingAdapterPosition + direction).coerceIn(0, count - 1)
-        val key = navAdapter.itemAt(target)?.key ?: return true
-        focusTopNavigationKey(key)
+        val fromKey = topNavigationKeyForView(focused) ?: navAdapter.focusedKeyOrSelected()
+        return moveSidebarFocusFromKey(fromKey, direction)
+    }
+
+    private fun moveSidebarFocusFromKey(fromKey: String, direction: Int): Boolean {
+        val sequence = topNavigationFocusSequence()
+        if (sequence.isEmpty()) return true
+        val visibleFromKey = fromKey.takeIf { it in sequence }
+            ?: MainRootNavRegistry.normalizeVisibleTopNavKey(currentTopNavKey)
+        val from = sequence.indexOf(visibleFromKey).coerceAtLeast(0)
+        val target = (from + if (direction < 0) -1 else 1).coerceIn(sequence.indices)
+        val targetKey = sequence[target]
+        val accepted = focusTopNavigationKey(targetKey)
+        AppLog.d(
+            "NavFocus",
+            "move direction=${if (direction < 0) "UP" else "DOWN"} from=$visibleFromKey to=$targetKey selected=$currentTopNavKey accepted=$accepted",
+        )
         return true
+    }
+
+    private fun topNavigationKeyForView(view: View?): String? {
+        if (view == null) return null
+        val holder = binding.recyclerTopNav.findContainingViewHolder(view) ?: return null
+        return navAdapter.itemAt(holder.bindingAdapterPosition)?.key
     }
 
 
     private fun shouldStartDpadDownFocusGuard(focused: View?): Boolean {
         if (isUserInfoOverlayVisible()) return false
+        // The expanded sidebar owns DOWN even if a route switch has temporarily moved Android focus
+        // into the new page. Blocking topNavigation here prevents the sidebar focus recovery below.
+        if (sidebarExpanded) return false
         if (focused != null) {
             if (isInTopNavigation(focused)) return false
             return isInMainContainer(focused)
@@ -527,7 +551,7 @@ class MainActivity : BaseActivity(), MainNavigationHost {
     }
 
     /**
-     * Category and Live keep their section tabs in the same row as the collapsed navigation
+     * Category, Live, and History keep their section tabs in the same row as the collapsed navigation
      * capsule: the content moves up by one capsule row and the tab strip starts to its right.
      */
     private fun scheduleSectionTabRowLayout() {
@@ -539,7 +563,9 @@ class MainActivity : BaseActivity(), MainNavigationHost {
     private fun applySectionTabRowLayout() {
         if (isDestroyed || binding.mainContainer.width == 0) return
         val root = currentRootFragment()
-        val tabLayout = root?.view?.findViewById<View>(R.id.tab_layout)
+        val tabLayout =
+            root?.view?.findViewById<View>(R.id.tab_layout)
+                ?: root?.view?.findViewById(R.id.history_source_tabs)
         val hasTopTabs = root is PageSectionFocusHost && tabLayout?.isShown == true
 
         val containerLp = binding.mainContainer.layoutParams as? MarginLayoutParams
@@ -688,11 +714,38 @@ class MainActivity : BaseActivity(), MainNavigationHost {
             }
 
             val focused = currentFocus
+            val isDirectionalKey = when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                -> true
+                else -> false
+            }
+            if (sidebarExpanded && isDirectionalKey && (event.repeatCount == 0 || event.repeatCount == 1 || event.repeatCount % 5 == 0)) {
+                val navKey = topNavigationKeyForView(focused)
+                    ?: focused?.takeIf(::isInTopNavigation)?.let { currentTopNavKey }
+                AppLog.d(
+                    "NavFocus",
+                    "key=${KeyEvent.keyCodeToString(event.keyCode)} repeat=${event.repeatCount} selected=$currentTopNavKey focusedKey=${navKey ?: "-"} focusClass=${focused?.javaClass?.simpleName ?: "none"}",
+                )
+            }
             if (sidebarExpanded && isNavKey(event.keyCode) && focused?.let(::isInExpandedSidebar) != true) {
-                // A touch-opened sidebar can be visible before RecyclerView children accept focus.
-                // Keep D-pad input on the overlay instead of letting it reach covered page content.
-                focusTopNavigationKey(MainRootNavRegistry.normalizeVisibleTopNavKey(currentTopNavKey))
-                return true
+                // A page switch may briefly move Android focus out of the still-open sidebar.
+                // Apply this key from the last nav item so the first DOWN/UP is not lost to recovery.
+                AppLog.w(
+                    "NavFocus",
+                    "key=${KeyEvent.keyCodeToString(event.keyCode)} focusOutsideSidebar=${focused?.javaClass?.simpleName ?: "none"} selected=$currentTopNavKey",
+                )
+                val navKey = navAdapter.focusedKeyOrSelected()
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_DOWN -> return moveSidebarFocusFromKey(navKey, 1)
+                    KeyEvent.KEYCODE_DPAD_UP -> return moveSidebarFocusFromKey(navKey, -1)
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.KEYCODE_DPAD_RIGHT,
+                    -> return collapseSidebar(restoreMainFocus = true)
+                    else -> return focusTopNavigationKey(navKey)
+                }
             }
 
             if (focused == null && isNavKey(event.keyCode)) {
@@ -1092,7 +1145,14 @@ class MainActivity : BaseActivity(), MainNavigationHost {
             return
         }
         if (topNavigationFocusReady && BiliClient.prefs.tabSwitchFollowsFocus && key != currentTopNavKey) {
-            navigateTopKey(key, refreshIfReselected = false)
+            if (navigateTopKey(key, refreshIfReselected = false) && sidebarExpanded) {
+                binding.root.post {
+                    if (sidebarExpanded && currentTopNavKey == key && currentFocus?.let(::isInExpandedSidebar) != true) {
+                        AppLog.d("NavFocus", "restore key=$key after focus-follow page switch")
+                        focusTopNavigationKey(key)
+                    }
+                }
+            }
         }
     }
 
@@ -1511,7 +1571,16 @@ class MainActivity : BaseActivity(), MainNavigationHost {
         if (focusAttached()) return true
         recycler.scrollToPosition(position)
         recycler.doOnPreDraw {
-            if (focusRequestToken == token && navAdapter.positionOf(key) == position) focusAttached()
+            if (focusRequestToken != token || navAdapter.positionOf(key) != position || !sidebarExpanded) {
+                return@doOnPreDraw
+            }
+            if (!focusAttached()) {
+                recycler.postOnAnimation {
+                    if (focusRequestToken == token && navAdapter.positionOf(key) == position && sidebarExpanded) {
+                        focusAttached()
+                    }
+                }
+            }
         }
         return true
     }

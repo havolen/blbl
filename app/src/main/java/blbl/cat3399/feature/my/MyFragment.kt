@@ -13,12 +13,13 @@ import blbl.cat3399.core.account.BiliSession
 import blbl.cat3399.core.navigation.MainNavigationKeys
 import blbl.cat3399.R
 import blbl.cat3399.core.log.AppLog
+import blbl.cat3399.core.ui.PageSectionFocusHost
 import blbl.cat3399.core.ui.TabContentSwitchFocusHost
 import blbl.cat3399.databinding.FragmentMyContainerBinding
 import blbl.cat3399.ui.BackPressHandler
 import kotlinx.coroutines.launch
 
-class MyFragment : Fragment(), BackPressHandler, MyNavigator, TabContentSwitchFocusHost {
+class MyFragment : Fragment(), BackPressHandler, MyNavigator, TabContentSwitchFocusHost, PageSectionFocusHost {
     private var _binding: FragmentMyContainerBinding? = null
     private val binding get() = _binding!!
     private var requestedTopNavigationKey: String = blbl.cat3399.core.navigation.MainNavigationKeys.MY_HISTORY
@@ -33,6 +34,9 @@ class MyFragment : Fragment(), BackPressHandler, MyNavigator, TabContentSwitchFo
         requestedTopNavigationKey = key
         if (changed && childFragmentManager.backStackEntryCount > 0 && !childFragmentManager.isStateSaved) {
             childFragmentManager.popBackStackImmediate(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        }
+        if (changed && _binding != null && !childFragmentManager.isStateSaved) {
+            showRootForLoginState(BiliSession.state.value)
         }
         (childFragmentManager.findFragmentById(R.id.my_container) as? MyTabsFragment)
             ?.selectTopNavigationKey(key)
@@ -99,6 +103,11 @@ class MyFragment : Fragment(), BackPressHandler, MyNavigator, TabContentSwitchFo
         return current.requestFocusCurrentPagePrimaryItemFromContentSwitch()
     }
 
+    override fun requestFocusPageSection(): Boolean {
+        val current = childFragmentManager.findFragmentById(R.id.my_container) as? PageSectionFocusHost ?: return false
+        return current.requestFocusPageSection()
+    }
+
     override fun openFavFolder(mediaId: Long, title: String) {
         if (_binding == null || childFragmentManager.isStateSaved) return
         childFragmentManager.beginTransaction()
@@ -127,7 +136,9 @@ class MyFragment : Fragment(), BackPressHandler, MyNavigator, TabContentSwitchFo
         if (accountChanged) {
             childFragmentManager.popBackStackImmediate(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
         }
-        val wantLogin = !session.canAccessPersonal
+        // History includes Mango's independent account, so keep its source switch reachable
+        // even when the Bilibili session is unavailable. Each source shows its own login prompt.
+        val wantLogin = !session.canAccessPersonal && requestedTopNavigationKey != MainNavigationKeys.MY_HISTORY
         val current = childFragmentManager.findFragmentById(R.id.my_container)
         if (!accountChanged) {
             if (wantLogin && current is MyLoginFragment) return

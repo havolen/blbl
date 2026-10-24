@@ -7,7 +7,6 @@ import blbl.cat3399.R
 import blbl.cat3399.core.net.BiliClient
 import blbl.cat3399.core.prefs.AppPrefs
 import blbl.cat3399.feature.live.LivePlayerActivity
-import blbl.cat3399.feature.player.PlayerActivity
 
 object ThemePresets {
     data class Spec(
@@ -24,7 +23,7 @@ object ThemePresets {
     fun resolve(context: Context): Spec {
         // Player is frozen for this iteration: do not follow preset.
         val activity = context.findActivity()
-        if (activity is PlayerActivity || activity is LivePlayerActivity) {
+        if (activity is LivePlayerActivity) {
             return Spec(baseThemeRes = R.style.Theme_Blbl_Player_Fixed, overlayRes = null)
         }
 

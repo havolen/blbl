@@ -2056,6 +2056,31 @@ class PlayerActivity : BaseActivity() {
     private fun initControls(engine: BlblPlayerEngine) {
         initTouchGestures()
 
+        PlayerControlBar.install(
+            host = binding.controlsRow,
+            sourceName = getString(R.string.player_source_bilibili),
+            actions = CommonPlayerActions(
+                playPause = binding.btnPlayPause,
+                next = binding.btnNext,
+                playlist = binding.btnListPanel,
+                danmaku = binding.btnDanmaku,
+                replay10 = binding.btnReplay10,
+                forward10 = binding.btnForward10,
+            ),
+            siteActions = listOf(
+                binding.btnPrev,
+                binding.btnSubtitle,
+                binding.btnUp,
+                binding.btnLike,
+                binding.btnCoin,
+                binding.btnFav,
+                binding.btnDetail,
+                binding.btnSponsorSubmit,
+                binding.btnAdvanced,
+                binding.btnClosePlayer,
+            ),
+        )
+
         binding.btnAdvanced.setOnClickListener {
             toggleSettingsPanel()
         }
@@ -2079,6 +2104,14 @@ class PlayerActivity : BaseActivity() {
             playNextByPlaybackMode(userInitiated = true)
             setControlsVisible(true)
         }
+        binding.btnReplay10.setOnClickListener {
+            seekRelative(-10_000L)
+            setControlsVisible(true)
+        }
+        binding.btnForward10.setOnClickListener {
+            seekRelative(10_000L)
+            setControlsVisible(true)
+        }
 
         binding.btnListPanel.setOnClickListener {
             showListPanelFromButton()
@@ -2092,10 +2125,6 @@ class PlayerActivity : BaseActivity() {
         binding.btnDanmaku.setOnClickListener {
             setDanmakuEnabled(!session.danmaku.enabled)
             setControlsVisible(true)
-        }
-
-        binding.btnComments.setOnClickListener {
-            toggleCommentsPanel()
         }
 
         binding.btnDetail.setOnClickListener {
@@ -2394,7 +2423,7 @@ class PlayerActivity : BaseActivity() {
     }
 
     internal fun updateDanmakuButton() {
-        binding.btnDanmaku.imageTintList = null
+        binding.btnDanmaku.imageTintList = ContextCompat.getColorStateList(this, blbl.cat3399.R.color.player_osd_icon_tint)
         binding.btnDanmaku.isSelected = session.danmaku.enabled
     }
 
@@ -2406,27 +2435,25 @@ class PlayerActivity : BaseActivity() {
         if (!subtitleAvailabilityKnown) {
             binding.btnSubtitle.isEnabled = true
             binding.btnSubtitle.alpha = 1.0f
+            binding.btnSubtitle.isSelected = false
             binding.btnSubtitle.imageTintList =
-                ContextCompat.getColorStateList(this, blbl.cat3399.R.color.player_button_tint)
+                ContextCompat.getColorStateList(this, blbl.cat3399.R.color.player_osd_icon_tint)
             return
         }
         if (!subtitleAvailable) {
             binding.btnSubtitle.isEnabled = false
             binding.btnSubtitle.alpha = 0.35f
+            binding.btnSubtitle.isSelected = false
             binding.btnSubtitle.imageTintList =
-                ContextCompat.getColorStateList(this, blbl.cat3399.R.color.player_button_tint)
+                ContextCompat.getColorStateList(this, blbl.cat3399.R.color.player_osd_icon_tint)
             return
         }
 
         binding.btnSubtitle.isEnabled = true
         binding.btnSubtitle.alpha = 1.0f
-        val colorRes =
-            if (session.subtitleEnabled) {
-                blbl.cat3399.R.color.blbl_blue
-            } else {
-                blbl.cat3399.R.color.player_button_tint
-            }
-        binding.btnSubtitle.imageTintList = ContextCompat.getColorStateList(this, colorRes)
+        binding.btnSubtitle.isSelected = session.subtitleEnabled
+        binding.btnSubtitle.imageTintList =
+            ContextCompat.getColorStateList(this, blbl.cat3399.R.color.player_osd_icon_tint)
     }
 
     internal fun toggleSubtitles(exo: ExoPlayer) {

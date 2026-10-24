@@ -25,9 +25,10 @@ internal fun PlayerActivity.applyOsdButtonsVisibility() {
     binding.btnPrev.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_PREV)) View.VISIBLE else View.GONE
     binding.btnPlayPause.visibility = View.VISIBLE
     binding.btnNext.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_NEXT)) View.VISIBLE else View.GONE
+    binding.btnReplay10.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_REPLAY_10)) View.VISIBLE else View.GONE
+    binding.btnForward10.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_FORWARD_10)) View.VISIBLE else View.GONE
     binding.btnSubtitle.visibility = if (subtitleSupported && enabled.contains(AppPrefs.PLAYER_OSD_BTN_SUBTITLE)) View.VISIBLE else View.GONE
     binding.btnDanmaku.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_DANMAKU)) View.VISIBLE else View.GONE
-    binding.btnComments.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_COMMENTS)) View.VISIBLE else View.GONE
     binding.btnDetail.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_DETAIL)) View.VISIBLE else View.GONE
     binding.btnUp.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_UP)) View.VISIBLE else View.GONE
     binding.btnLike.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_LIKE)) View.VISIBLE else View.GONE
@@ -58,24 +59,24 @@ internal fun PlayerActivity.updateActionButtonsUi() {
 
 internal fun PlayerActivity.updateLikeButtonUi() {
     val active = actionLiked
-    val colorRes = if (active) R.color.blbl_blue else R.color.blbl_text
-    binding.btnLike.imageTintList = ContextCompat.getColorStateList(this, colorRes)
+    binding.btnLike.isSelected = active
+    binding.btnLike.imageTintList = ContextCompat.getColorStateList(this, R.color.player_osd_icon_tint)
     binding.btnLike.isEnabled = true
     binding.btnLike.alpha = 1.0f
 }
 
 internal fun PlayerActivity.updateCoinButtonUi() {
     val active = actionCoinCount > 0
-    val colorRes = if (active) R.color.blbl_blue else R.color.blbl_text
-    binding.btnCoin.imageTintList = ContextCompat.getColorStateList(this, colorRes)
+    binding.btnCoin.isSelected = active
+    binding.btnCoin.imageTintList = ContextCompat.getColorStateList(this, R.color.player_osd_icon_tint)
     binding.btnCoin.isEnabled = true
     binding.btnCoin.alpha = 1.0f
 }
 
 internal fun PlayerActivity.updateFavButtonUi() {
     val active = actionFavored
-    val colorRes = if (active) R.color.blbl_blue else R.color.blbl_text
-    binding.btnFav.imageTintList = ContextCompat.getColorStateList(this, colorRes)
+    binding.btnFav.isSelected = active
+    binding.btnFav.imageTintList = ContextCompat.getColorStateList(this, R.color.player_osd_icon_tint)
     binding.btnFav.isEnabled = true
     binding.btnFav.alpha = 1.0f
 }
@@ -346,6 +347,7 @@ internal fun PlayerActivity.applyFavSelection(
 }
 
 internal fun PlayerActivity.updatePlaylistControls() {
+    val visibleButtons = BiliClient.prefs.playerOsdButtons.toSet()
     val hasListPanel =
         partsListItems.isNotEmpty() ||
             (pageListItems.isNotEmpty() && pageListIndex in pageListItems.indices) ||
@@ -381,22 +383,29 @@ internal fun PlayerActivity.updatePlaylistControls() {
         val enabled = prevEnabled
         binding.btnPrev.isEnabled = enabled
         binding.btnPrev.alpha = if (enabled) 1.0f else 0.35f
+        binding.btnPrev.visibility = if (enabled && visibleButtons.contains(AppPrefs.PLAYER_OSD_BTN_PREV)) View.VISIBLE else View.GONE
     }
     run {
         val enabled = nextEnabled
         binding.btnNext.isEnabled = enabled
         binding.btnNext.alpha = if (enabled) 1.0f else 0.35f
+        binding.btnNext.visibility = if (enabled && visibleButtons.contains(AppPrefs.PLAYER_OSD_BTN_NEXT)) View.VISIBLE else View.GONE
     }
 
     binding.btnListPanel.isEnabled = hasListPanel
     binding.btnListPanel.alpha = if (hasListPanel) 1.0f else 0.35f
+    binding.btnListPanel.visibility =
+        if (hasListPanel && visibleButtons.contains(AppPrefs.PLAYER_OSD_BTN_LIST_PANEL)) View.VISIBLE else View.GONE
+    if (currentFocus?.visibility == View.GONE) binding.btnPlayPause.post { focusFirstControl() }
 }
 
 internal fun PlayerActivity.updateUpButton() {
-    val enabled = currentUpMid > 0L
+    val enabled = currentUpMid > 0L &&
+        BiliClient.prefs.playerOsdButtons.contains(AppPrefs.PLAYER_OSD_BTN_UP)
     val alpha = if (enabled) 1.0f else 0.35f
     binding.btnUp.isEnabled = enabled
     binding.btnUp.alpha = alpha
+    binding.btnUp.visibility = if (enabled) View.VISIBLE else View.GONE
 }
 
 internal fun PlayerActivity.pickRecommendedVideo(items: List<VideoCard>, excludeBvid: String): VideoCard? {

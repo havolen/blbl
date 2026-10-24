@@ -39,7 +39,8 @@ internal fun PlayerActivity.onOverlayPanelShown(openedFromMenuKey: Boolean) {
 internal fun PlayerActivity.onLastOverlayPanelDismissed() {
     if (isOverlayPanelVisible()) return
     menuRevealedPanelSessionActive = false
-    setControlsVisible(false)
+    setControlsVisible(true)
+    restoreLastOsdFocusOr { focusFirstControl() }
 }
 
 internal fun PlayerActivity.initSidePanels() {
@@ -59,7 +60,7 @@ internal fun PlayerActivity.initSidePanels() {
                 when {
                     videoCommentsController?.isThreadVisible() == true -> commentViews.recyclerCommentThread
                     isCommentsPanelVisible() -> commentViews.recyclerComments
-                    else -> binding.btnComments
+                    else -> binding.btnPlayPause
                 }
             },
         )

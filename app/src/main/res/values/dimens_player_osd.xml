@@ -6,8 +6,8 @@
       Baseline tuning target: 1920x1080 with screen scale shown as 1.5x in "设备信息 -> 屏幕".
     -->
 
-    <!-- Focus target size (all buttons) -->
-    <dimen name="player_osd_button_target_size">53.1dp</dimen>
+    <dimen name="player_osd_button_width">64dp</dimen>
+    <dimen name="player_osd_button_height">48dp</dimen>
 
     <!-- Button spacing -->
     <dimen name="player_osd_gap">2.7dp</dimen>

@@ -91,7 +91,7 @@ scripts/tv-verify.sh
 ## 6. 禁止项（硬性）
 
 - **不改** `local.properties`、`keystore/`、签名密码或任何密钥文件；不把本机路径/密钥写进 tracked 文件。
-- **不覆盖**用户未提交改动：开工先 `git status --short`；已有 `M`/`??` 视为用户工作，不 `checkout`/`reset`/`stash`/覆盖；只 stage 本次新增/修改的文件；未获要求不 commit。
+- **不覆盖**用户未提交改动：开工先 `git status --short`；已有 `M`/`??` 视为用户工作，不 `checkout`/`reset`/`stash`/覆盖；只 stage 本次新增/修改的文件；按 §8 在打包前提交。
 - **新颜色必须用主题属性**（`?attr/...`、`?android:attr/...`）；不得在 layout 里新增固定 `@color/blbl_*` 调色板引用；`checkThemeTokens` 必须通过。
 - **不以新增功能/动画/视觉包装掩盖性能问题**；1GB 设备卡顿/OOM 先修性能，不靠加开关或删测试“通过”。
 - 不删除/跳过测试，不关闭 `checkThemeTokens`，不修改 `minSdk`/`targetSdk`/ABI 过滤来绕过兼容问题（除非明确要求）。
@@ -101,6 +101,17 @@ scripts/tv-verify.sh
 
 1. `git status --short`，识别并避开用户未提交改动。
 2. 定位改动范围；需要细节时读 `.dsh/skills/tv-build-verify/SKILL.md`，不要重复搜索 JDK/SDK/AVD。
-3. 改完跑 `scripts/tv-build.sh`；UI/焦点改动再跑 `scripts/tv-verify.sh`。
-4. 汇报时给出：改了什么、构建结果、设备 serial、焦点走查结果、截图/产物路径、未验证项（尤其是真机播放/4K/DRM）。
-5. 只 stage 本次文件；提交信息用中文简述“改了什么 + 为什么”。
+3. 改完先按 §8 提交本地代码，再跑 `scripts/tv-build.sh`；UI/焦点改动再跑 `scripts/tv-verify.sh`。
+4. 汇报时给出：改了什么、提交号、构建结果、设备 serial、焦点走查结果、截图/产物路径、未验证项（尤其是真机播放/4K/DRM）。
+5. 验收通过后按 §8 推送远端；只 stage 本次文件，提交信息用中文简述“改了什么 + 为什么”。
+
+## 8. 提交与推送（打包前必做）
+
+**不要用未提交的工作区直接跑打包/验收。** 每次运行 `scripts/tv-build.sh` 或 `scripts/tv-verify.sh` 前，先把当前代码提交到本地 Git；验收通过后再推送远端。
+
+1. `git status --short`，确认改动范围；排除 `local.properties`、`keystore/`、`.gradle-dsh/`、`build/`、`.DS_Store` 等本机/构建文件。
+2. 只 `git add` 本次相关文件；用 `git diff --cached --stat`、`git diff --cached` 复核，避免把无关改动、Cookie/Token、密钥或私人路径带进提交。
+3. 提交信息用中文说明“改了什么 + 为什么”，例如：`搜索: 二维码与软键盘切换`。打包前至少有一个本地提交。
+4. 再运行 `scripts/tv-build.sh`；UI/焦点/播放改动继续跑 `scripts/tv-verify.sh` 或对应真机验证。
+5. 验收通过后 `git push origin <当前分支>`；失败就修复后追加提交，**不要**用 `--force` 覆盖远端历史。
+6. 临时 WIP 可以先用 `git commit` 存快照，验收通过后再整理成正式提交；不要长期把可运行代码留在未提交状态。

@@ -1,0 +1,33 @@
+Mango playback control verification (sanitized)
+Date: 2026-10-23 Asia/Singapore
+APK: app/build/outputs/apk/debug/app-debug.apk
+SHA-256: cd8e44c2cf09032c3f27e223bc3719c70dc693e9d2afdde2b4553c27d24ea12e
+
+Build: scripts/tv-build.sh PASS (unit tests, theme-token check, assembleDebug)
+Samsung: SM-F946U, Android 15 / API 35, arm64-v8a
+ADB serial: adb-RFCWB0KSX9N-cOFWkA._adb-tls-connect._tcp
+Install: adb install -r Success; user data retained
+
+WebView: Mango video size 1920x1080
+- native app overlay pause: playing -> paused
+- seek +10s while paused: +10.0s
+- seek -10s while paused: -10.0s
+- resume: paused -> playing, current time advances
+- Mango webFullscreen action fills WebView viewport
+- Back exits web fullscreen and keeps MangoVideoActivity foreground
+- next Back exits the player page
+
+ExoPlayer: captured current Mango HLS session, Media3 HLS source
+- playback state READY, video size 1920x1080
+- pause/resume works
+- seek +10s and -10s work while paused
+- exit returns to the original MangoVideoActivity
+
+AVD: TCL_75Q10G_API28, Android 9 / API 28 / x86, emulator-5554
+- scripts/tv-verify.sh PASS: 8 focus records, 5/6 directional moves
+- artifacts: build/dsh-tv-verify/20261023-113307-85306/
+
+Logcat checks: FATAL EXCEPTION=0, app ANR=0, Force finishing=0.
+Only counts are retained; no raw network URLs, cookies, account names, or Mango history titles are saved.
+Test path: Debug playback demo launched the shared MangoVideoActivity directly; the private history-list card was not clicked in this test.
+ADB local CDP forward tcp:9227 was removed; the device connection remains online.

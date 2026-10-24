@@ -87,6 +87,8 @@ class MainTopNavAdapter(
 
     fun selectedKey(): String = selectedKey
 
+    fun focusedKeyOrSelected(): String = focusedKey ?: selectedKey
+
     fun selectedAdapterPosition(): Int = items.indexOfFirst { it.key == selectedKey }
 
     fun positionOf(key: String): Int = items.indexOfFirst { it.key == key }

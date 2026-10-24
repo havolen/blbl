@@ -163,7 +163,10 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
                         }
 
                         override fun onLeftEdge(): Boolean {
-                            return switchToPrevTabFromContentEdge()
+                            // At the grid's left edge, open the sidebar on this page's entry.
+                            // Moving to the previous global item can trigger focus-follow and
+                            // silently replace the Cinema/Bangumi page during boundary navigation.
+                            return focusSelectedTabIfAvailable()
                         }
 
                         override fun onRightEdge() {
@@ -497,11 +500,6 @@ class PgcRecommendGridFragment : Fragment(), RefreshKeyHandler, TabSwitchFocusTa
     private fun switchToNextTabFromContentEdge(): Boolean {
         captureCurrentFocusedAdapterPosition()
         return (activity as? MainNavigationHost)?.requestFocusTopNavigationAdjacent(1) == true
-    }
-
-    private fun switchToPrevTabFromContentEdge(): Boolean {
-        captureCurrentFocusedAdapterPosition()
-        return (activity as? MainNavigationHost)?.requestFocusTopNavigationAdjacent(-1) == true
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

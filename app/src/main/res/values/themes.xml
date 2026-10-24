@@ -36,6 +36,10 @@
         <item name="blblNavigationSelectedText">?attr/blblOnPageBackdrop</item>
         <item name="blblNavigationFocusBackground">?attr/blblAccent</item>
         <item name="blblNavigationFocusText">?attr/colorOnSecondary</item>
+        <item name="playerOsdIdleBackground">?attr/blblAccentWeak</item>
+        <item name="playerOsdFocusBackground">?attr/blblNavigationFocusBackground</item>
+        <item name="playerOsdIdleText">?attr/blblOnPageBackdropSecondary</item>
+        <item name="playerOsdFocusText">?attr/blblNavigationFocusText</item>
 
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.Blbl.MaterialAlertDialog</item>
         <item name="alertDialogTheme">@style/ThemeOverlay.Blbl.MaterialAlertDialog</item>
@@ -119,6 +123,10 @@
         <item name="blblAccentContainer">@color/blbl_accent_blue_container</item>
         <item name="blblAccentWeak">@color/blbl_accent_blue_weak</item>
         <item name="blblAccentPressed">@color/blbl_accent_blue_pressed</item>
+        <item name="playerOsdIdleBackground">@color/blbl_glass_accent_weak</item>
+        <item name="playerOsdFocusBackground">@color/blbl_glass_focus</item>
+        <item name="playerOsdIdleText">@color/blbl_text_secondary_dark_glass</item>
+        <item name="playerOsdFocusText">@color/blbl_glass_focus_text</item>
         <item name="colorOnSecondary">@android:color/white</item>
         <item name="colorOnSurface">@color/blbl_text</item>
         <item name="blblOnPageBackdrop">@color/blbl_text</item>

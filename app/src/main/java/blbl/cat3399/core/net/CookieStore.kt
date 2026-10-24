@@ -13,10 +13,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 class CookieStore(
     context: Context,
+    preferencesName: String = "blbl_cookie_store",
 ) : CookieJar {
     var onCredentialsChanged: (() -> Unit)? = null
     private val prefs: SharedPreferences =
-        context.getSharedPreferences("blbl_cookie_store", Context.MODE_PRIVATE)
+        context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
 
     private val store: ConcurrentHashMap<String, MutableList<Cookie>> = ConcurrentHashMap()
 

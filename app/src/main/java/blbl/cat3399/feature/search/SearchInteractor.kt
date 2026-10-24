@@ -45,7 +45,7 @@ class SearchInteractor(
         state.suggestKeywords = emptyList()
         renderer.updateMiddleUi(historyMatches(state.query), extra = state.suggestKeywords)
         renderer.updateClearHistoryButton(state.query)
-        renderer.focusFirstKey()
+        renderer.focusInitialInput()
     }
 
     fun removeHistory(keyword: String, position: Int) {

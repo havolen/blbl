@@ -141,17 +141,7 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
-    <style name="Widget.Blbl.TabLayout" parent="Widget.MaterialComponents.TabLayout">
-        <item name="tabTextAppearance">@style/TextAppearance.Blbl.Tab</item>
-        <item name="tabIndicator">@drawable/blbl_tab_indicator</item>
-        <item name="tabIndicatorColor">?attr/blblAccent</item>
-        <item name="tabIndicatorFullWidth">false</item>
-        <item name="tabBackground">?attr/blblFocusBgRound</item>
-        <item name="tabSelectedTextColor">?attr/blblOnPageBackdrop</item>
-        <item name="tabTextColor">?attr/blblOnPageBackdropSecondary</item>
-        <item name="tabPaddingTop">4dp</item>
-        <item name="tabPaddingBottom">2dp</item>
-    </style>
+    <style name="Widget.Blbl.TabLayout" parent="Widget.Blbl.SectionTabLayout" />
 
     <style name="Widget.Blbl.SectionTabLayout" parent="Widget.MaterialComponents.TabLayout">
         <item name="tabTextAppearance">@style/TextAppearance.Blbl.SectionTab</item>
@@ -170,7 +160,8 @@
 
     <!-- Player OSD sizing overlay: baseline values (scaled at runtime by userScale + autoScale). -->
     <style name="ThemeOverlay.Blbl.PlayerOsd.Normal" parent="ThemeOverlay.MaterialComponents">
-        <item name="playerOsdButtonTargetSize">@dimen/player_osd_button_target_size</item>
+        <item name="playerOsdButtonWidth">@dimen/player_osd_button_width</item>
+        <item name="playerOsdButtonHeight">@dimen/player_osd_button_height</item>
         <item name="playerOsdPadTransport">@dimen/player_osd_pad_transport</item>
         <item name="playerOsdPadNormal">@dimen/player_osd_pad_normal</item>
         <item name="playerOsdPadSmall">@dimen/player_osd_pad_small</item>
@@ -216,7 +207,7 @@
         <item name="android:focusable">true</item>
         <item name="android:stateListAnimator">@animator/blbl_focus_scale</item>
         <item name="backgroundTint">@color/blbl_my_action_bg</item>
-        <item name="cornerRadius">16dp</item>
+        <item name="cornerRadius">24dp</item>
         <item name="strokeWidth">0dp</item>
         <item name="strokeColor">?attr/blblFocusStrokeFocusOnlyColor</item>
         <item name="rippleColor">?attr/blblAccentWeak</item>

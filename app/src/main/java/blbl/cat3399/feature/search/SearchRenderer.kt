@@ -86,7 +86,13 @@ class SearchRenderer internal constructor(
 
                             KeyEvent.KEYCODE_DPAD_DOWN -> {
                                 if (row != KEY_ROW_COUNT - 1) return@setOnKeyListener false
-                                binding.btnSearch.requestFocus()
+                                // The keyboard is the bottom panel; keep focus inside it.
+                                true
+                            }
+
+                            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                if (column != 0) return@setOnKeyListener false
+                                true
                             }
 
                             KeyEvent.KEYCODE_DPAD_RIGHT -> {
@@ -282,7 +288,7 @@ class SearchRenderer internal constructor(
         binding.btnClear.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             when (keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP -> binding.tvQuery.requestFocus()
+                KeyEvent.KEYCODE_DPAD_UP -> binding.btnInputMode.requestFocus()
                 KeyEvent.KEYCODE_DPAD_DOWN -> focusKeyAt(KEY_CLEAR_DOWN_POSITION)
                 else -> false
             }
@@ -295,7 +301,7 @@ class SearchRenderer internal constructor(
         binding.btnBackspace.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             when (keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP -> binding.tvQuery.requestFocus()
+                KeyEvent.KEYCODE_DPAD_UP -> binding.btnInputMode.requestFocus()
                 KeyEvent.KEYCODE_DPAD_DOWN -> focusKeyAt(KEY_BACKSPACE_DOWN_POSITION)
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     focusHistoryAt(0) || focusHotAt(0)
@@ -310,14 +316,87 @@ class SearchRenderer internal constructor(
         binding.btnSearch.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             when (keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP -> focusLastKey()
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    binding.tvQuery.requestFocus()
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    binding.btnSearchMango.requestFocus()
+                    true
+                }
+
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    focusLastHistoryItem() || focusLastHotItem()
+                    binding.btnInputMode.requestFocus()
                     true
                 }
 
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    // Bottom edge: don't escape to sidebar.
+                    if (isResultsVisible()) {
+                        focusFirstResultCard()
+                    } else {
+                        focusHistoryAt(0) || focusHotAt(0)
+                    }
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+        binding.btnSearchMango.setOnClickListener { fragment.openMangoSearch() }
+        binding.btnSearchMango.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    binding.tvQuery.requestFocus()
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_LEFT -> true
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    binding.btnSearch.requestFocus()
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (isResultsVisible()) {
+                        focusFirstResultCard()
+                    } else if (state.keyboardVisible) {
+                        focusFirstKey()
+                    } else {
+                        focusHistoryAt(0) || focusHotAt(0)
+                    }
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+        binding.btnInputMode.setOnClickListener { toggleInputMode() }
+        binding.btnInputMode.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    binding.tvQuery.requestFocus()
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    binding.btnSearch.requestFocus()
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_RIGHT -> true
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (isResultsVisible()) {
+                        focusFirstResultCard()
+                    } else if (state.keyboardVisible) {
+                        focusFirstKey()
+                    } else {
+                        focusHotAt(0) || focusHistoryAt(0)
+                    }
                     true
                 }
 
@@ -333,7 +412,7 @@ class SearchRenderer internal constructor(
             when (keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP -> focusLastHistoryItem()
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    focusLastKey()
+                    if (state.keyboardVisible) focusLastKey() else binding.btnInputMode.requestFocus()
                     true
                 }
 
@@ -353,6 +432,7 @@ class SearchRenderer internal constructor(
 
         updateQueryUi()
         updateClearHistoryButton(state.query)
+        applyInputMode()
     }
 
     private fun setupQueryInput() {
@@ -379,6 +459,13 @@ class SearchRenderer internal constructor(
 
         fun enterImeEditMode() {
             if (isResultsVisible()) showInput()
+            if (!state.keyboardVisible) {
+                // QR mode owns the bottom area: reveal the on-screen keyboard instead of the system IME.
+                state.keyboardVisible = true
+                applyInputMode()
+                focusFirstKey()
+                return
+            }
             imeEditMode = true
 
             input.showSoftInputOnFocus = true
@@ -435,12 +522,7 @@ class SearchRenderer internal constructor(
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
                     if (imeEditMode) return@setOnKeyListener false
                     // Prevent focus escaping to sidebar.
-                    if (binding.panelInput.visibility == View.VISIBLE) {
-                        focusLastKey()
-                        true
-                    } else {
-                        false
-                    }
+                    binding.panelInput.visibility == View.VISIBLE
                 }
 
                 KeyEvent.KEYCODE_DPAD_UP -> {
@@ -450,7 +532,11 @@ class SearchRenderer internal constructor(
 
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
                     if (imeEditMode) return@setOnKeyListener false
-                    focusLastKey()
+                    if (state.keyboardVisible) {
+                        focusLastKey()
+                    } else {
+                        binding.btnSearchMango.requestFocus()
+                    }
                     true
                 }
 
@@ -648,6 +734,39 @@ class SearchRenderer internal constructor(
         state.resultsVisible = false
         binding.panelResults.visibility = View.GONE
         binding.panelInput.visibility = View.VISIBLE
+        applyInputMode()
+    }
+
+    fun focusInitialInput() {
+        if (state.keyboardVisible) {
+            focusFirstKey()
+        } else {
+            binding.tvQuery.requestFocus()
+        }
+    }
+
+    fun applyInputMode() {
+        val keyboard = state.keyboardVisible
+        binding.panelKeyboard.visibility = if (keyboard) View.VISIBLE else View.GONE
+        binding.panelQr.visibility = if (keyboard) View.GONE else View.VISIBLE
+        binding.tvInputModeLabel.setText(
+            if (keyboard) R.string.search_switch_to_qr else R.string.search_switch_to_keyboard,
+        )
+    }
+
+    private fun toggleInputMode() {
+        if (isResultsVisible()) showInput()
+        val showKeyboard = !state.keyboardVisible
+        if (!showKeyboard) {
+            // Move focus out of the keyboard before hiding it.
+            binding.btnInputMode.requestFocus()
+        }
+        state.keyboardVisible = showKeyboard
+        applyInputMode()
+        binding.tvQuery.hideImeReliable()
+        if (showKeyboard) {
+            focusFirstKey()
+        }
     }
 
     fun showResults() {
@@ -685,6 +804,11 @@ class SearchRenderer internal constructor(
         val hintText = state.defaultHint ?: viewContext.getString(R.string.tab_search)
         binding.tvQuery.hint = hintText
         updateQueryAlpha(query = state.query)
+        binding.tvPhoneQuery.text =
+            viewContext.getString(
+                R.string.search_phone_query,
+                state.query.ifBlank { viewContext.getString(R.string.search_phone_empty) },
+            )
 
         val current = binding.tvQuery.text?.toString().orEmpty()
         if (current == state.query) return
@@ -720,7 +844,7 @@ class SearchRenderer internal constructor(
     fun focusSuggestionAfterRemoval(removedPosition: Int) {
         val count = suggestAdapter.itemCount
         if (count <= 0) {
-            focusFirstKey()
+            focusInitialInput()
             return
         }
         focusHistoryAt(removedPosition.coerceAtMost(count - 1))
@@ -759,6 +883,20 @@ class SearchRenderer internal constructor(
         val pos = binding.tabLayout.selectedTabPosition.takeIf { it >= 0 } ?: 0
         val tabView = tabStrip.getChildAt(pos) ?: return false
         tabView.requestFocus()
+        return true
+    }
+
+    /** Focus the first result card when moving down from the action row on the results page. */
+    private fun focusFirstResultCard(): Boolean {
+        if (!isResultsVisible()) return false
+        val adapter = binding.recyclerResults.adapter ?: return false
+        if (adapter.itemCount <= 0) return binding.tvResultsPlaceholder.requestFocus()
+        binding.recyclerResults.requestFocusAdapterPositionReliable(
+            position = 0,
+            smoothScroll = false,
+            isAlive = { !released && fragment.isAdded && fragment.isResumed },
+            onFocused = { state.rememberFocusedResultPosition(state.currentTabIndex, 0) },
+        )
         return true
     }
 
@@ -1234,26 +1372,37 @@ class SearchRenderer internal constructor(
         rescalePadding(binding.tvQuery, left = true, top = true, right = true, bottom = true)
         rescaleTextSize(binding.tvQuery)
 
+        rescaleMargins(binding.panelActions, start = true, top = true, end = true, bottom = false)
         rescaleMargins(binding.panelInput, start = false, top = true, end = false, bottom = false)
         rescaleMargins(binding.panelResults, start = false, top = true, end = false, bottom = false)
 
         rescaleMargins(binding.panelKeyboard, start = true, top = false, end = true, bottom = false)
         rescaleMargins(binding.recyclerKeys, start = false, top = true, end = false, bottom = false)
 
-        listOf(binding.btnClear, binding.btnBackspace, binding.btnSearch, binding.btnClearHistory, binding.btnSort).forEach(::rescaleCard)
+        listOf(binding.btnClear, binding.btnBackspace, binding.btnSearch, binding.btnSearchMango, binding.btnInputMode, binding.btnClearHistory, binding.btnSort).forEach(::rescaleCard)
 
-        listOf(binding.btnClear, binding.btnBackspace, binding.btnSearch, binding.btnClearHistory, binding.btnSort).forEach { btn ->
+        listOf(binding.btnClear, binding.btnBackspace, binding.btnSearch, binding.btnSearchMango, binding.btnInputMode, binding.btnClearHistory, binding.btnSort).forEach { btn ->
             rescaleLayoutSize(btn, width = false, height = true)
         }
         rescaleMargins(binding.btnClear, start = false, top = false, end = true, bottom = false)
-        rescaleMargins(binding.btnSearch, start = false, top = true, end = false, bottom = false)
+        rescaleMargins(binding.btnSearch, start = true, top = false, end = false, bottom = false)
+        rescaleMargins(binding.btnInputMode, start = true, top = false, end = false, bottom = false)
         rescaleMargins(binding.btnClearHistory, start = false, top = true, end = false, bottom = false)
         rescaleMargins(binding.btnSort, start = false, top = false, end = true, bottom = false)
 
         (binding.btnClear.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
         (binding.btnBackspace.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
         (binding.btnSearch.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
+        (binding.btnSearchMango.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
+        rescaleTextSize(binding.tvInputModeLabel)
         (binding.btnClearHistory.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
+
+        rescaleLayoutSize(binding.ivPhoneQr, width = true, height = true)
+        rescalePadding(binding.panelQrContent, left = true, top = true, right = true, bottom = true)
+        rescaleTextSize(binding.tvPhoneTitle)
+        rescaleTextSize(binding.tvPhoneHint)
+        rescaleTextSize(binding.tvPhoneUrl)
+        rescaleTextSize(binding.tvPhoneQuery)
 
         rescaleMargins(binding.panelHistory, start = false, top = false, end = true, bottom = false)
 

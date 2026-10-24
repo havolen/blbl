@@ -23,6 +23,7 @@ fun TabLayout.enableDpadTabFocus(
         val index = i
         val tabView = tabStrip.getChildAt(i)
         tabView.isFocusable = true
+        tabView.isFocusableInTouchMode = true
         tabView.isClickable = true
         if (disableDefaultFocusHighlight && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // The platform focus highlight would draw a grey rectangle behind the pill background.

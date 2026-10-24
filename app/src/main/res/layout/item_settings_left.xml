@@ -9,7 +9,7 @@
     android:focusable="true"
     android:stateListAnimator="@animator/blbl_focus_scale"
     app:cardBackgroundColor="@color/blbl_settings_left_card_bg"
-    app:cardCornerRadius="14dp"
+    app:cardCornerRadius="24dp"
     app:cardElevation="0dp"
     app:strokeColor="?attr/blblFocusStrokeFocusOnlyColor"
     app:strokeWidth="0dp">
