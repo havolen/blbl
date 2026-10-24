@@ -234,7 +234,10 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                 "#outlayer.iqp-player .iqp-player-videolayer,#outlayer.iqp-player video{" +
                 "width:100%!important;height:100%!important}" +
                 "#outlayer.iqp-player video{object-fit:contain!important}" +
-                ".iqp-player{overflow:visible!important}" +
+                ".iqp-player{width:100vw!important;height:100vh!important;max-width:none!important;" +
+                "max-height:none!important;overflow:visible!important}" +
+                ".iqp-player.use-pc-bridge{position:fixed!important;inset:0!important;" +
+                "z-index:2147483646!important}" +
                 "html,body{overflow:hidden!important;margin:0!important}" +
                 "</style>"
         val viewport = Regex("""<meta[^>]+name=["']viewport["'][^>]*>""", RegexOption.IGNORE_CASE)
@@ -333,6 +336,10 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                 '#outlayer.iqp-player .iqp-player-videolayer,#outlayer.iqp-player video{' +
                 'width:100%!important;height:100%!important}' +
                 '#outlayer.iqp-player video{object-fit:contain!important}' +
+                '.iqp-player{width:100vw!important;height:100vh!important;max-width:none!important;' +
+                'max-height:none!important;overflow:visible!important}' +
+                '.iqp-player.use-pc-bridge{position:fixed!important;inset:0!important;' +
+                'z-index:2147483646!important}' +
                 'body{overflow:hidden!important;margin:0!important}';
               var video = document.querySelector('video');
               if (video) {
@@ -340,6 +347,7 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                 var play = video.play();
                 if (play && play.catch) play.catch(function() {});
               }
+              window.dispatchEvent(new Event('resize'));
               return 'ok';
             })();
         """
