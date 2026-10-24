@@ -87,9 +87,9 @@ class IqiyiHistoryApi(
                 title = title,
                 albumTitle = clean(record.optString("albumName")),
                 coverUrl = normalizeUrl(
-                    record.optString("postImage").ifBlank {
-                        record.optString("videoImageUrl").ifBlank {
-                            record.optString("albumImageUrl")
+                    record.optString("videoImageUrl").ifBlank {
+                        record.optString("albumImageUrl").ifBlank {
+                            record.optString("postImage")
                         }
                     },
                 ),
