@@ -121,6 +121,7 @@
 
     <!-- Player is frozen for this iteration: keep existing blue focus/active states. -->
     <style name="Theme.Blbl.Player.Fixed" parent="Theme.Blbl.Base.Dark">
+        <item name="android:windowBackground">@android:color/black</item>
         <item name="blblAccent">@color/blbl_blue</item>
         <item name="blblAccentContainer">@color/blbl_accent_blue_container</item>
         <item name="blblAccentWeak">@color/blbl_accent_blue_weak</item>

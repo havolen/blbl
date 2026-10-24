@@ -7,8 +7,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -47,9 +50,49 @@ class IqiyiPlayerActivity : BaseActivity() {
     private var playlistIndex: Int = 0
     private var resolvingNext = false
     private var controlsVisible = true
+    private var speedHint: TextView? = null
     private var progressLoopRunning = false
     private val handler = Handler(Looper.getMainLooper())
     private val hideControlsRunnable = Runnable { setControlsVisible(false) }
+    private val seekController: PlayerSeekKeyController by lazy {
+        PlayerSeekKeyController(
+            object : PlayerSeekKeyController.Host {
+                override fun isSeekKeyActive(): Boolean = !controlsVisible || binding.progress.hasFocus()
+
+                override fun currentPositionMs(): Long = player?.currentPosition ?: 0L
+
+                override fun durationMs(): Long = player?.duration ?: 0L
+
+                override fun seekTo(positionMs: Long) {
+                    player?.seekTo(positionMs)
+                    updateProgress()
+                }
+
+                override fun playbackSpeed(): Float = player?.playbackParameters?.speed ?: 1f
+
+                override fun setPlaybackSpeed(speed: Float) {
+                    player?.setPlaybackSpeed(speed)
+                }
+
+                override fun onSeekStep(targetMs: Long, durationMs: Long) {
+                    setControlsVisible(true)
+                    handler.removeCallbacks(hideControlsRunnable)
+                    binding.progress.post { binding.progress.requestFocus() }
+                    updateProgress()
+                }
+
+                override fun onHoldSpeedStart(speed: Float) {
+                    handler.removeCallbacks(hideControlsRunnable)
+                    showSpeedHint("${speed.toInt()}x 快进")
+                }
+
+                override fun onHoldSpeedStop() {
+                    hideSpeedHint()
+                    scheduleControlsHide()
+                }
+            },
+        )
+    }
     private val progressTicker = object : Runnable {
         override fun run() {
             updateProgress()
@@ -64,6 +107,20 @@ class IqiyiPlayerActivity : BaseActivity() {
         Immersive.apply(this, BiliClient.prefs.fullscreenEnabled)
         window.decorView.keepScreenOn = true
         binding.root.isFocusable = true
+        speedHint = TextView(this).apply {
+            setTextColor(android.graphics.Color.WHITE)
+            textSize = 16f
+            setPadding(dp(12), dp(6), dp(12), dp(6))
+            setBackgroundResource(R.drawable.bg_player_controls)
+            visibility = View.GONE
+        }
+        binding.root.addView(
+            speedHint,
+            FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END).apply {
+                topMargin = dp(24)
+                marginEnd = dp(24)
+            },
+        )
 
         val streamUrl = intent.getStringExtra(EXTRA_STREAM_URL)?.trim().orEmpty()
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
@@ -166,6 +223,11 @@ class IqiyiPlayerActivity : BaseActivity() {
         binding.playerView.player = exo
         binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
         startPlayback(streamUrl, startSec)
+        binding.progress.isFocusable = true
+        binding.progress.isFocusableInTouchMode = true
+        binding.progress.setOnFocusChangeListener { _, focused ->
+            binding.progress.scaleY = if (focused) 3f else 1f
+        }
         playPauseButton.requestFocus()
         progressLoopRunning = true
         handler.post(progressTicker)
@@ -223,6 +285,15 @@ class IqiyiPlayerActivity : BaseActivity() {
         if (!hasNext && button.hasFocus()) playPause?.requestFocus()
     }
 
+    private fun showSpeedHint(text: String) {
+        speedHint?.text = text
+        speedHint?.visibility = View.VISIBLE
+    }
+
+    private fun hideSpeedHint() {
+        speedHint?.visibility = View.GONE
+    }
+
     private fun scheduleControlsHide() {
         handler.removeCallbacks(hideControlsRunnable)
         if (controlsVisible) handler.postDelayed(hideControlsRunnable, CONTROLS_HIDE_DELAY_MS)
@@ -241,24 +312,10 @@ class IqiyiPlayerActivity : BaseActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (seekController.handle(event)) return true
         if (event.action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event)
         val keyCode = event.keyCode
         if (!controlsVisible) {
-            when (keyCode) {
-                KeyEvent.KEYCODE_DPAD_LEFT,
-                KeyEvent.KEYCODE_MEDIA_REWIND,
-                -> {
-                    seekBy(-SEEK_STEP_MS)
-                    return true
-                }
-
-                KeyEvent.KEYCODE_DPAD_RIGHT,
-                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
-                -> {
-                    seekBy(SEEK_STEP_MS)
-                    return true
-                }
-            }
             if (isDpadKey(keyCode)) {
                 setControlsVisible(true, requestFocus = true)
                 return true
@@ -290,13 +347,6 @@ class IqiyiPlayerActivity : BaseActivity() {
         }
     }
 
-    private fun seekBy(deltaMs: Long) {
-        val p = player ?: return
-        val duration = p.duration.takeIf { it > 0L } ?: Long.MAX_VALUE
-        p.seekTo((p.currentPosition + deltaMs).coerceIn(0L, duration))
-        updateProgress()
-    }
-
     private fun updateProgress() {
         val p = player ?: return
         val duration = p.duration.takeIf { it > 0L } ?: 0L
@@ -306,6 +356,8 @@ class IqiyiPlayerActivity : BaseActivity() {
         binding.progress.progress =
             if (duration > 0L) ((position * 1000L) / duration).toInt().coerceIn(0, 1000) else 0
     }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun formatTime(ms: Long): String {
         val totalSec = (ms / 1000L).coerceAtLeast(0L)
@@ -320,6 +372,7 @@ class IqiyiPlayerActivity : BaseActivity() {
     }
 
     override fun onDestroy() {
+        seekController.release()
         progressLoopRunning = false
         handler.removeCallbacks(progressTicker)
         handler.removeCallbacks(hideControlsRunnable)
@@ -344,7 +397,6 @@ class IqiyiPlayerActivity : BaseActivity() {
 
         private const val PROGRESS_INTERVAL_MS = 500L
         private const val CONTROLS_HIDE_DELAY_MS = 4_000L
-        private const val SEEK_STEP_MS = 10_000L
         private const val MEDIA_USER_AGENT =
             "Mozilla/5.0 (Linux; Android 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 

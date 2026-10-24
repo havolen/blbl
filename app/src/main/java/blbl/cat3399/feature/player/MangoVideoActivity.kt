@@ -128,13 +128,17 @@ class MangoVideoActivity : BaseActivity() {
         }
 
         if (legacyWebView) {
+            // The WebView is only a fallback; hide it while resolving to avoid a white flash
+            // between the list page and the native player.
+            binding.root.setBackgroundColor(android.graphics.Color.BLACK)
+            binding.webView.setBackgroundColor(android.graphics.Color.BLACK)
+            binding.webView.visibility = View.INVISIBLE
             val ids = parseMangoVideoIds(url)
             if (ids == null) {
                 AppToast.show(this, "当前播放页不支持原生解析")
                 finish()
                 return
             }
-            AppToast.show(this, "正在解析播放地址…")
             lifecycleScope.launch {
                 val stream = streamRepository.resolve(ids.first, ids.second)
                 if (stream == null) {
@@ -155,10 +159,6 @@ class MangoVideoActivity : BaseActivity() {
                     .putExtra(EXTRA_MANGO_VIDEO_ID, ids.first)
                     .putExtra(EXTRA_MANGO_PROGRAM_ID, ids.second)
                     .putExtra(EXTRA_MANGO_CLIP_ID, stream.clipId)
-                AppToast.show(
-                    this@MangoVideoActivity,
-                    if (stream.height >= 1080) "1080P 原生播放" else "${stream.definition} 原生播放",
-                )
                 runCatching { startActivity(probeIntent) }
                     .onFailure { AppToast.show(this@MangoVideoActivity, "无法启动 EXO 播放器") }
                 finish()

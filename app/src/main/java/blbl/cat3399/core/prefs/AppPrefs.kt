@@ -569,10 +569,18 @@ class AppPrefs(context: Context) {
         set(value) = prefs.edit().putFloat(KEY_PLAYER_SPEED, value).apply()
 
     var playerShortSeekStepSeconds: Int
-        get() =
-            normalizePlayerShortSeekStepSeconds(
-                prefs.getInt(KEY_PLAYER_SHORT_SEEK_STEP_SECONDS, PLAYER_SHORT_SEEK_STEP_SECONDS_DEFAULT),
-            )
+        get() {
+            val stored = prefs.getInt(KEY_PLAYER_SHORT_SEEK_STEP_SECONDS, PLAYER_SHORT_SEEK_STEP_SECONDS_DEFAULT)
+            if (!prefs.getBoolean(KEY_PLAYER_SHORT_SEEK_STEP_MIGRATED, false)) {
+                prefs.edit().putBoolean(KEY_PLAYER_SHORT_SEEK_STEP_MIGRATED, true).apply()
+                // The old default was 10s; the TV seek step is now a uniform 20s.
+                if (stored == 10) {
+                    prefs.edit().putInt(KEY_PLAYER_SHORT_SEEK_STEP_SECONDS, PLAYER_SHORT_SEEK_STEP_SECONDS_DEFAULT).apply()
+                    return PLAYER_SHORT_SEEK_STEP_SECONDS_DEFAULT
+                }
+            }
+            return normalizePlayerShortSeekStepSeconds(stored)
+        }
         set(value) =
             prefs.edit()
                 .putInt(
@@ -1213,6 +1221,7 @@ class AppPrefs(context: Context) {
         private const val KEY_SUBTITLE_BACKGROUND_OPACITY = "subtitle_background_opacity"
         private const val KEY_PLAYER_SPEED = "player_speed"
         private const val KEY_PLAYER_SHORT_SEEK_STEP_SECONDS = "player_short_seek_step_seconds"
+        private const val KEY_PLAYER_SHORT_SEEK_STEP_MIGRATED = "player_short_seek_step_migrated_v2"
         private const val KEY_PLAYER_HOLD_SEEK_SPEED = "player_hold_seek_speed"
         private const val KEY_PLAYER_HOLD_SEEK_MODE = "player_hold_seek_mode"
         private const val KEY_PLAYER_HOLD_SCRUB_TRAVERSE_SECONDS = "player_hold_scrub_traverse_seconds"
@@ -1365,7 +1374,7 @@ class AppPrefs(context: Context) {
         const val PLAYER_PLAYBACK_MODE_RECOMMEND = "recommend"
 
         val PLAYER_SHORT_SEEK_STEP_SECONDS_OPTIONS: Set<Int> = linkedSetOf(3, 5, 8, 10, 15, 20)
-        const val PLAYER_SHORT_SEEK_STEP_SECONDS_DEFAULT = 10
+        const val PLAYER_SHORT_SEEK_STEP_SECONDS_DEFAULT = 20
 
         const val PLAYER_HOLD_SEEK_MODE_SPEED = "speed"
         const val PLAYER_HOLD_SEEK_MODE_SCRUB = "scrub"

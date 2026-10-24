@@ -75,6 +75,7 @@ class MangoNativePlayerActivity : Activity() {
     private lateinit var danmakuView: DanmakuView
     private lateinit var danmakuToggle: DanmakuToggleButton
     private var debugInfoOverlay: TextView? = null
+    private var speedHint: TextView? = null
     private var controlsHost: LinearLayout? = null
     private var controlsScroll: android.widget.HorizontalScrollView? = null
     private lateinit var bottomPanel: LinearLayout
@@ -111,6 +112,46 @@ class MangoNativePlayerActivity : Activity() {
         laneDensity = DanmakuLaneDensity.Standard,
         showHighLikeIcon = true,
     )
+    private val seekController: PlayerSeekKeyController by lazy {
+        PlayerSeekKeyController(
+            object : PlayerSeekKeyController.Host {
+                override fun isSeekKeyActive(): Boolean = !controlsVisible || progressBar.hasFocus()
+
+                override fun currentPositionMs(): Long = player?.currentPosition ?: 0L
+
+                override fun durationMs(): Long = player?.duration ?: 0L
+
+                override fun seekTo(positionMs: Long) {
+                    player?.seekTo(positionMs)
+                    updateStatus()
+                }
+
+                override fun playbackSpeed(): Float = player?.playbackParameters?.speed ?: 1f
+
+                override fun setPlaybackSpeed(speed: Float) {
+                    player?.setPlaybackSpeed(speed)
+                }
+
+                override fun onSeekStep(targetMs: Long, durationMs: Long) {
+                    showControls(requestFocus = false)
+                    handler.removeCallbacks(hideControlsRunnable)
+                    progressBar.requestFocus()
+                    updateStatus()
+                }
+
+                override fun onHoldSpeedStart(speed: Float) {
+                    handler.removeCallbacks(hideControlsRunnable)
+                    showSpeedHint("${speed.toInt()}x 快进")
+                }
+
+                override fun onHoldSpeedStop() {
+                    hideSpeedHint()
+                    scheduleControlsHide()
+                }
+            },
+        )
+    }
+
     private val refreshStatus = object : Runnable {
         override fun run() {
             updateStatus()
@@ -158,6 +199,20 @@ class MangoNativePlayerActivity : Activity() {
         }
         videoFrame.addView(danmakuView, FrameLayout.LayoutParams(-1, -1))
         root.addView(videoFrame, FrameLayout.LayoutParams(-1, -1))
+        speedHint = TextView(uiContext).apply {
+            setTextColor(Color.WHITE)
+            textSize = 16f
+            setPadding(dp(12), dp(6), dp(12), dp(6))
+            setBackgroundResource(R.drawable.bg_player_controls)
+            visibility = View.GONE
+        }
+        root.addView(
+            speedHint,
+            FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END).apply {
+                topMargin = dp(24)
+                marginEnd = dp(24)
+            },
+        )
 
         currentTime = TextView(uiContext).apply {
             setTextColor(Color.WHITE)
@@ -180,6 +235,18 @@ class MangoNativePlayerActivity : Activity() {
             )
             progressBackgroundTintList = ColorStateList.valueOf(Color.argb(72, 255, 255, 255))
             minimumHeight = 0
+            isFocusable = true
+            isFocusableInTouchMode = true
+            setOnFocusChangeListener { _, focused ->
+                scaleY = if (focused) 3f else 1f
+                progressTintList = ColorStateList.valueOf(
+                    if (focused) {
+                        Color.WHITE
+                    } else {
+                        ThemeColor.resolve(this@MangoNativePlayerActivity, R.attr.blblAccent, R.color.blbl_blue)
+                    },
+                )
+            }
         }
         danmakuToggle = DanmakuToggleButton(uiContext).apply {
             onToggle = { enabled ->
@@ -354,6 +421,11 @@ class MangoNativePlayerActivity : Activity() {
                 .putExtra(MangoVideoActivity.EXTRA_URL, episode.pageUrl),
         )
         finish()
+    }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (seekController.handle(event)) return true
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
@@ -558,6 +630,15 @@ class MangoNativePlayerActivity : Activity() {
         scheduleControlsHide()
     }
 
+    private fun showSpeedHint(text: String) {
+        speedHint?.text = text
+        speedHint?.visibility = View.VISIBLE
+    }
+
+    private fun hideSpeedHint() {
+        speedHint?.visibility = View.GONE
+    }
+
     private fun showControls(requestFocus: Boolean = false) {
         controlsVisible = true
         bottomPanel.visibility = View.VISIBLE
@@ -687,6 +768,7 @@ class MangoNativePlayerActivity : Activity() {
     }
 
     override fun onDestroy() {
+        seekController.release()
         episodeOverlay?.release()
         catalogScope.cancel()
         handler.removeCallbacks(refreshStatus)
