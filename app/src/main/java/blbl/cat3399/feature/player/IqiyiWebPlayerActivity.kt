@@ -11,6 +11,7 @@ import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import blbl.cat3399.core.account.IqiyiSessionStore
@@ -22,10 +23,15 @@ import blbl.cat3399.core.ui.Immersive
 import blbl.cat3399.databinding.ActivityIqiyiWebPlayerBinding
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.ByteArrayInputStream
+import java.util.concurrent.TimeUnit
 
 /** H5 fallback for iQiyi short/UGC videos that are not exposed through the native HLS API. */
 class IqiyiWebPlayerActivity : BaseActivity() {
     private lateinit var binding: ActivityIqiyiWebPlayerBinding
+    private lateinit var sessionStore: IqiyiSessionStore
     private lateinit var playPause: PlayerIconButton
     private val handler = Handler(Looper.getMainLooper())
     private var desktopMode = false
@@ -53,6 +59,7 @@ class IqiyiWebPlayerActivity : BaseActivity() {
             return
         }
         binding.tvTitle.text = title.ifBlank { getString(R.string.iqiyi_player_title) }
+        sessionStore = IqiyiSessionStore(applicationContext)
         setupControls()
 
         installIqiyiCookies()
@@ -88,6 +95,18 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                         view?.evaluateJavascript(AUTOPLAY_JS, null)
                     }
                     handler.postDelayed({ binding.progress.visibility = View.GONE }, 800L)
+                }
+
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                ): WebResourceResponse? {
+                    if (!desktopMode) return null
+                    val req = request ?: return null
+                    if (!req.isForMainFrame) return null
+                    val target = req.url
+                    if (target.host != "www.iqiyi.com" || !target.path.orEmpty().startsWith("/v_")) return null
+                    return runCatching { loadDesktopDocument(target.toString()) }.getOrNull()
                 }
 
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -169,9 +188,45 @@ class IqiyiWebPlayerActivity : BaseActivity() {
         return url
     }
 
+    private fun loadDesktopDocument(url: String): WebResourceResponse? {
+        val request =
+            Request.Builder()
+                .url(url)
+                .header("User-Agent", DESKTOP_UA)
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "zh-CN,zh;q=0.9")
+                .get()
+                .build()
+        val client =
+            OkHttpClient.Builder()
+                .cookieJar(sessionStore.cookies)
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .callTimeout(25, TimeUnit.SECONDS)
+                .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val body = response.body?.string() ?: return null
+            val html = injectDesktopViewport(body)
+            return WebResourceResponse(
+                "text/html",
+                "utf-8",
+                ByteArrayInputStream(html.toByteArray(Charsets.UTF_8)),
+            )
+        }
+    }
+
+    private fun injectDesktopViewport(html: String): String {
+        val meta =
+            "<meta name=\"viewport\" content=\"width=1920, initial-scale=0.38, " +
+                "maximum-scale=0.38, user-scalable=no\">"
+        val viewport = Regex("""<meta[^>]+name=["']viewport["'][^>]*>""", RegexOption.IGNORE_CASE)
+        if (viewport.containsMatchIn(html)) return viewport.replace(html, meta)
+        return html.replaceFirst("<head>", "<head>$meta", ignoreCase = true)
+    }
+
     private fun installIqiyiCookies() {
-        val store = IqiyiSessionStore(applicationContext)
-        val cookies = store.cookies.loadForRequest("https://m.iqiyi.com/".toHttpUrl())
+        val cookies = sessionStore.cookies.loadForRequest("https://m.iqiyi.com/".toHttpUrl())
         if (cookies.isEmpty()) return
         val manager = CookieManager.getInstance()
         manager.setAcceptCookie(true)
