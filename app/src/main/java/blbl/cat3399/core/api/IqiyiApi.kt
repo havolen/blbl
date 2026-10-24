@@ -123,6 +123,7 @@ class IqiyiApi(
                 .header("User-Agent", USER_AGENT)
                 .get()
                 .build()
+        val resolveStartMs = android.os.SystemClock.elapsedRealtime()
         return try {
             client.newCall(request).await().use { response ->
                 if (!response.isSuccessful) return null
@@ -166,6 +167,7 @@ class IqiyiApi(
                 .header("User-Agent", USER_AGENT)
                 .get()
                 .build()
+        val resolveStartMs = android.os.SystemClock.elapsedRealtime()
         return try {
             client.newCall(request).await().use { response ->
                 if (!response.isSuccessful) return null
@@ -215,6 +217,11 @@ class IqiyiApi(
                     compareBy<StreamCandidate> { it.width * 1000 + it.height }
                         .thenBy { if (it.vd in H265_VD) 0 else 1 },
                 ) ?: return null
+                AppLog.i(
+                    "IqiyiPerf",
+                    "resolve best vd=${best.vd} label=${best.label} ${best.width}x${best.height} " +
+                        "hevc=${best.vd in H265_VD} elapsed=${android.os.SystemClock.elapsedRealtime() - resolveStartMs}ms",
+                )
                 Stream(
                     url = best.url,
                     qualityLabel = best.label,

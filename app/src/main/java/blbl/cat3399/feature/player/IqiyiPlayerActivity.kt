@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
+import android.os.SystemClock
 import android.os.Looper
 import android.view.Gravity
 import android.view.KeyEvent
@@ -13,9 +14,11 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
@@ -51,6 +54,22 @@ class IqiyiPlayerActivity : BaseActivity() {
     private var resolvingNext = false
     private var controlsVisible = true
     private var speedHint: TextView? = null
+    private val startedAtMs = SystemClock.elapsedRealtime()
+    private var perfStatsCount = 0
+    private val perfStats =
+        object : Runnable {
+            override fun run() {
+                val exo = player ?: return
+                val counters = exo.videoDecoderCounters
+                AppLog.i(
+                    "IqiyiPerf",
+                    "t=${SystemClock.elapsedRealtime() - startedAtMs}ms pos=${exo.currentPosition} " +
+                        "buf=${exo.bufferedPosition} state=${exo.playbackState} rate=${exo.playbackParameters.speed} " +
+                        "rendered=${counters?.renderedOutputBufferCount ?: -1} dropped=${counters?.droppedBufferCount ?: -1}",
+                )
+                if (++perfStatsCount < 12) handler.postDelayed(this, 1_000L)
+            }
+        }
     private var progressLoopRunning = false
     private val handler = Handler(Looper.getMainLooper())
     private val hideControlsRunnable = Runnable { setControlsVisible(false) }
@@ -190,6 +209,11 @@ class IqiyiPlayerActivity : BaseActivity() {
                     addListener(
                         object : Player.Listener {
                             override fun onPlaybackStateChanged(playbackState: Int) {
+                                AppLog.i(
+                                    "IqiyiPerf",
+                                    "state=$playbackState t=${SystemClock.elapsedRealtime() - startedAtMs}ms " +
+                                        "pos=${player?.currentPosition ?: -1}",
+                                )
                                 binding.loading.visibility =
                                     if (playbackState == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
                                 if (playbackState == Player.STATE_READY) {
@@ -203,10 +227,34 @@ class IqiyiPlayerActivity : BaseActivity() {
                             }
 
                             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                                AppLog.i("IqiyiPerf", "playing=$isPlaying t=${SystemClock.elapsedRealtime() - startedAtMs}ms")
                                 playPause?.update(
                                     if (isPlaying) R.drawable.ic_player_pause else R.drawable.ic_player_play,
                                     getString(R.string.player_btn_play_pause),
                                 )
+                            }
+
+                            override fun onRenderedFirstFrame() {
+                                AppLog.i("IqiyiPerf", "firstFrame t=${SystemClock.elapsedRealtime() - startedAtMs}ms")
+                            }
+
+                            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                                AppLog.i("IqiyiPerf", "videoSize=${videoSize.width}x${videoSize.height}")
+                            }
+
+                            override fun onTracksChanged(tracks: Tracks) {
+                                for (group in tracks.groups) {
+                                    for (i in 0 until group.length) {
+                                        val format = group.getTrackFormat(i)
+                                        if (group.type == C.TRACK_TYPE_VIDEO) {
+                                            AppLog.i(
+                                                "IqiyiPerf",
+                                                "video codec=${format.codecs} size=${format.width}x${format.height} " +
+                                                    "bitrate=${format.bitrate} fps=${format.frameRate}",
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
                             override fun onPlayerError(error: PlaybackException) {
@@ -226,7 +274,17 @@ class IqiyiPlayerActivity : BaseActivity() {
         binding.progress.isFocusable = true
         binding.progress.isFocusableInTouchMode = true
         binding.progress.setOnFocusChangeListener { _, focused ->
-            binding.progress.scaleY = if (focused) 3f else 1f
+            binding.progress.progressTintList = android.content.res.ColorStateList.valueOf(
+                if (focused) {
+                    android.graphics.Color.WHITE
+                } else {
+                    blbl.cat3399.core.theme.ThemeColor.resolve(
+                        this,
+                        R.attr.blblAccent,
+                        R.color.blbl_blue,
+                    )
+                },
+            )
         }
         playPauseButton.requestFocus()
         progressLoopRunning = true
@@ -243,6 +301,13 @@ class IqiyiPlayerActivity : BaseActivity() {
         exo.setMediaSource(mediaSource, startSec * 1_000L)
         exo.prepare()
         exo.playWhenReady = true
+        AppLog.i(
+            "IqiyiPerf",
+            "prepare t=${SystemClock.elapsedRealtime() - startedAtMs}ms host=${url.substringAfter("://").substringBefore('/')}",
+        )
+        perfStatsCount = 0
+        handler.removeCallbacks(perfStats)
+        handler.postDelayed(perfStats, 1_000L)
     }
 
     private fun playNextEpisode() {

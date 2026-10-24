@@ -238,7 +238,6 @@ class MangoNativePlayerActivity : Activity() {
             isFocusable = true
             isFocusableInTouchMode = true
             setOnFocusChangeListener { _, focused ->
-                scaleY = if (focused) 3f else 1f
                 progressTintList = ColorStateList.valueOf(
                     if (focused) {
                         Color.WHITE
