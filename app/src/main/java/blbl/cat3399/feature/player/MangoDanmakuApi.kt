@@ -194,7 +194,12 @@ internal object MangoDanmakuApi {
 
     private fun safeVersion(value: String): String? {
         val version = value.trim().trim('/')
-        return version.takeIf { it.isNotEmpty() && VERSION_PATTERN.matches(it) && it != "." && it != ".." }
+        if (version.isEmpty() || version.contains("://")) return null
+        val segments = version.split('/')
+        if (segments.any { it.isEmpty() || it == "." || it == ".." || !VERSION_SEGMENT_PATTERN.matches(it) }) {
+            return null
+        }
+        return version
     }
 
     private fun normalizeCdnHost(value: String): String? {
@@ -210,7 +215,7 @@ internal object MangoDanmakuApi {
     private const val API_ORIGIN = "https://galaxy.bz.mgtv.com"
     private const val MIN_INTERVAL_SEC = 1
     private const val MAX_INTERVAL_SEC = 600
-    private val VERSION_PATTERN = Regex("[A-Za-z0-9._-]+")
+    private val VERSION_SEGMENT_PATTERN = Regex("[A-Za-z0-9._-]+")
     private val DEFAULT_CDN_HOSTS = listOf("bullet-ws.hitv.com", "bullet-ali.hitv.com")
 }
 
