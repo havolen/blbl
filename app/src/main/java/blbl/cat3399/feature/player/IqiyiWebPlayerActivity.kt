@@ -16,6 +16,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import blbl.cat3399.BuildConfig
 import blbl.cat3399.core.account.IqiyiSessionStore
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.net.BiliClient
@@ -67,6 +68,7 @@ class IqiyiWebPlayerActivity : BaseActivity() {
         setupControls()
 
         installIqiyiCookies()
+        if (BuildConfig.DEBUG) android.webkit.WebView.setWebContentsDebuggingEnabled(true)
         binding.webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
