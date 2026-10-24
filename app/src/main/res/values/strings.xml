@@ -195,6 +195,8 @@
     <string name="platform_iqiyi">爱奇艺</string>
     <string name="platform_mango">芒果 TV</string>
     <string name="platform_tencent">腾讯视频</string>
+    <string name="platform_youku">优酷</string>
+    <string name="platform_douyin">抖音</string>
     <string name="bili_login_title">哔哩哔哩登录</string>
     <string name="account_row_description_fmt">%1$s账号，%2$s</string>
     <string name="account_row_login_description_fmt">登录%1$s账号</string>

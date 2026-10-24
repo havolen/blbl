@@ -1,10 +1,10 @@
 package blbl.cat3399.feature.player
 
+import android.animation.AnimatorInflater
 import android.content.Context
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.animation.AnimatorInflater
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -17,11 +17,9 @@ import blbl.cat3399.R
 /** Common playback actions are always presented in the same order by every site player. */
 internal data class CommonPlayerActions(
     val playPause: View,
-    val next: View,
-    val playlist: View,
-    val danmaku: View,
-    val replay10: View,
-    val forward10: View,
+    val next: View? = null,
+    val playlist: View? = null,
+    val danmaku: View? = null,
 )
 
 /** Shared, scrollable playback strip. Site-specific actions follow the single site label. */
@@ -45,19 +43,13 @@ internal object PlayerControlBar {
             clipToPadding = false
             setPadding(dp(host.context, 8), 0, dp(host.context, 8), 0)
         }
-        val common = listOf(
-            actions.playPause,
-            actions.next,
-            actions.playlist,
-            actions.danmaku,
-            actions.replay10,
-            actions.forward10,
-        )
+        // Seeking lives on the D-pad, so the strip only carries actions that a remote cannot do.
+        val common = listOfNotNull(actions.playPause, actions.next, actions.playlist, actions.danmaku)
         common.forEachIndexed { index, view ->
             (view.parent as? ViewGroup)?.removeView(view)
             if (view is ImageButton) styleCommonIcon(view)
-            val params = LinearLayout.LayoutParams(dp(host.context, 64), dp(host.context, 48))
-            if (index > 0) params.marginStart = dp(host.context, 3)
+            val params = LinearLayout.LayoutParams(BUTTON_SIZE_DP.dp(host.context), BUTTON_SIZE_DP.dp(host.context))
+            if (index > 0) params.marginStart = dp(host.context, 6)
             row.addView(view, params)
         }
 
@@ -73,20 +65,23 @@ internal object PlayerControlBar {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             setPadding(dp(context, 12), 0, dp(context, 12), 0)
         }
-        row.addView(sourceLabel, LinearLayout.LayoutParams(-2, dp(host.context, 48)))
+        row.addView(sourceLabel, LinearLayout.LayoutParams(-2, BUTTON_SIZE_DP.dp(host.context)))
 
         siteActions.forEach { view ->
             (view.parent as? ViewGroup)?.removeView(view)
             val params = view.layoutParams as? LinearLayout.LayoutParams
-                ?: LinearLayout.LayoutParams(-2, dp(host.context, 48))
+                ?: LinearLayout.LayoutParams(-2, BUTTON_SIZE_DP.dp(host.context))
             if (params.width <= 0) params.width = -2
-            params.height = dp(host.context, 48)
+            params.height = BUTTON_SIZE_DP.dp(host.context)
             params.marginStart = dp(host.context, 4)
             params.marginEnd = dp(host.context, 4)
             row.addView(view, params)
             when (view) {
                 is android.widget.Button -> view.applyPlayerPillStyle()
-                is ImageButton -> styleCommonIcon(view)
+                is ImageButton -> {
+                    styleCommonIcon(view)
+                    params.width = BUTTON_SIZE_DP.dp(host.context)
+                }
             }
         }
 
@@ -105,9 +100,9 @@ internal object PlayerControlBar {
     fun styleCommonIcon(button: ImageButton) {
         val ctx = button.context
         button.scaleType = ImageView.ScaleType.FIT_CENTER
-        val pad = dp(ctx, 6)
+        val pad = dp(ctx, 12)
         button.setPadding(pad, pad, pad, pad)
-        button.background = ContextCompat.getDrawable(ctx, R.drawable.bg_player_osd_pill)
+        button.background = ContextCompat.getDrawable(ctx, R.drawable.bg_player_osd_circle)
         button.imageTintList = ContextCompat.getColorStateList(ctx, R.color.player_osd_icon_tint)
         button.stateListAnimator = AnimatorInflater.loadStateListAnimator(ctx, R.animator.blbl_focus_scale)
         button.isFocusable = true
@@ -127,4 +122,9 @@ internal object PlayerControlBar {
 
     private fun dp(context: Context, value: Int): Int =
         (value * context.resources.displayMetrics.density).toInt()
+
+    private fun Int.dp(context: Context): Int = dp(context, this)
+
+    /** Play/pause height reference used by the danmaku text size. */
+    const val BUTTON_SIZE_DP: Int = 48
 }

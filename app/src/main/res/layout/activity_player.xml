@@ -455,34 +455,7 @@
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_player_danmaku"
                 app:tint="@color/player_osd_icon_tint" />
-
-            <ImageButton
-                android:id="@+id/btn_replay_10"
-                android:layout_width="?attr/playerOsdButtonWidth"
-                android:layout_height="?attr/playerOsdButtonHeight"
-                android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="@drawable/bg_player_osd_pill"
-                android:contentDescription="@string/player_btn_replay_10"
-                android:focusable="true"
-                android:padding="?attr/playerOsdPadSmall"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_player_replay_10"
-                app:tint="@color/player_osd_icon_tint" />
-
-            <ImageButton
-                android:id="@+id/btn_forward_10"
-                android:layout_width="?attr/playerOsdButtonWidth"
-                android:layout_height="?attr/playerOsdButtonHeight"
-                android:layout_marginEnd="?attr/playerOsdGap"
-                android:background="@drawable/bg_player_osd_pill"
-                android:contentDescription="@string/player_btn_forward_10"
-                android:focusable="true"
-                android:padding="?attr/playerOsdPadSmall"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_player_forward_10"
-                app:tint="@color/player_osd_icon_tint" />
-
-            <ImageButton
+<ImageButton
                 android:id="@+id/btn_subtitle"
                 android:layout_width="?attr/playerOsdButtonWidth"
                 android:layout_height="?attr/playerOsdButtonHeight"

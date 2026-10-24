@@ -374,8 +374,6 @@ class MangoVideoActivity : BaseActivity() {
         playPauseIcon = playPause
         val next = PlayerIconButton(playerContext, R.drawable.ic_player_next, "下一集") { playNextEpisode() }
         val playlist = PlayerIconButton(playerContext, R.drawable.ic_player_playlist, "播放列表") { showEpisodePicker() }
-        val back = PlayerIconButton(playerContext, R.drawable.ic_player_replay_10, "后退 10 秒") { seekWebPlayer(-10) }
-        val forward = PlayerIconButton(playerContext, R.drawable.ic_player_forward_10, "前进 10 秒") { seekWebPlayer(10) }
         val debugInfo = PlayerIconButton(playerContext, R.drawable.ic_player_debug, "调试信息") { toggleDebugInfo() }
         val exoPlayer = textPill("EXO 播放器") { launchExoProbe() }
         controlsHost = LinearLayout(playerContext).apply {
@@ -386,7 +384,7 @@ class MangoVideoActivity : BaseActivity() {
         controlsScroll = PlayerControlBar.install(
             host = controlsHost,
             sourceName = getString(R.string.player_source_mango),
-            actions = CommonPlayerActions(playPause, next, playlist, danmakuToggle, back, forward),
+            actions = CommonPlayerActions(playPause, next, playlist, danmakuToggle),
             siteActions = listOf(debugInfo, exoPlayer),
         )
         bottomPanel.addView(controlsHost, LinearLayout.LayoutParams(-1, dp(48)))

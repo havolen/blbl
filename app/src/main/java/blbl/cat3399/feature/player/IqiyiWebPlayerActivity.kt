@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.view.KeyEvent
+import android.widget.LinearLayout
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -35,6 +37,8 @@ class IqiyiWebPlayerActivity : BaseActivity() {
     private lateinit var playPause: PlayerIconButton
     private val handler = Handler(Looper.getMainLooper())
     private var desktopMode = false
+    private var controlsVisible = true
+    private val hideControlsRunnable = Runnable { setControlsVisible(false) }
     private val playbackPoll =
         object : Runnable {
             override fun run() {
@@ -93,6 +97,7 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                         handler.postDelayed({ applyDesktopLayout() }, 3000L)
                     } else {
                         view?.evaluateJavascript(AUTOPLAY_JS, null)
+                        view?.evaluateJavascript(DANMAKU_SIZE_JS, null)
                     }
                     handler.postDelayed({ binding.progress.visibility = View.GONE }, 800L)
                 }
@@ -125,25 +130,78 @@ class IqiyiWebPlayerActivity : BaseActivity() {
         playPause =
             PlayerIconButton(this, R.drawable.ic_player_play, getString(R.string.player_btn_play_pause)) {
                 togglePlayback()
-            }
-        val replay =
-            PlayerIconButton(this, R.drawable.ic_player_replay_10, getString(R.string.player_btn_replay_10)) {
-                seekBy(-10)
-            }
-        val forward =
-            PlayerIconButton(this, R.drawable.ic_player_forward_10, getString(R.string.player_btn_forward_10)) {
-                seekBy(10)
+                scheduleControlsHide()
             }
         val exit =
             PlayerIconButton(this, R.drawable.ic_player_close, getString(R.string.iqiyi_player_exit)) {
                 finish()
             }
-        binding.controlsRow.addView(playPause)
-        binding.controlsRow.addView(replay)
-        binding.controlsRow.addView(forward)
-        binding.controlsRow.addView(exit)
+        binding.controlsRow.addView(playPause, LinearLayout.LayoutParams(dp(48), dp(48)))
+        binding.controlsRow.addView(
+            exit,
+            LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(6) },
+        )
+        binding.root.isFocusable = true
         playPause.requestFocus()
+        scheduleControlsHide()
     }
+
+    private fun scheduleControlsHide() {
+        handler.removeCallbacks(hideControlsRunnable)
+        if (controlsVisible) handler.postDelayed(hideControlsRunnable, CONTROLS_HIDE_DELAY_MS)
+    }
+
+    private fun setControlsVisible(visible: Boolean, requestFocus: Boolean = false) {
+        handler.removeCallbacks(hideControlsRunnable)
+        controlsVisible = visible
+        binding.controlsRow.visibility = if (visible) View.VISIBLE else View.GONE
+        if (visible) {
+            if (requestFocus) playPause?.requestFocus()
+            scheduleControlsHide()
+        } else if (currentFocus != null) {
+            binding.root.requestFocus()
+        }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event)
+        val keyCode = event.keyCode
+        if (!controlsVisible) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_MEDIA_REWIND,
+                -> {
+                    seekBy(-SEEK_STEP_SECONDS)
+                    return true
+                }
+
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
+                -> {
+                    seekBy(SEEK_STEP_SECONDS)
+                    return true
+                }
+            }
+            if (isDpadKey(keyCode)) {
+                setControlsVisible(true, requestFocus = true)
+                return true
+            }
+        } else if (isDpadKey(keyCode)) {
+            scheduleControlsHide()
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun isDpadKey(keyCode: Int): Boolean =
+        keyCode in
+            setOf(
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+            )
 
     private fun togglePlayback() {
         evaluateVideo("if(v.paused){v.play()}else{v.pause()}")
@@ -155,6 +213,8 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                 "v.currentTime=Math.max(0,Math.min(t,v.currentTime+($seconds)));",
         )
     }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun updatePlaybackState() {
         binding.webView.evaluateJavascript(
@@ -227,7 +287,7 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                 "max-width:none!important;overflow:visible!important}" +
                 "[class*=\"NavHeader_navHeaderNew\"],[class*=\"topbarXPlayer\"]," +
                 "[class*=\"configPage_configPageWrapper\"],[class*=\"configPage_configPage\"]," +
-                "[class*=\"danmaku\"],[class*=\"Danmaku\"]{display:none!important}" +
+                "[class*=\"danmu\"],[class*=\"Danmu\"],[class*=\"danmaku\"],[class*=\"Danmaku\"]{display:none!important}" +
                 "#outlayer.iqp-player{position:fixed!important;inset:0!important;" +
                 "width:100vw!important;height:100vh!important;z-index:2147483647!important;" +
                 "background:#000!important;overflow:visible!important}" +
@@ -268,6 +328,7 @@ class IqiyiWebPlayerActivity : BaseActivity() {
 
     override fun onDestroy() {
         handler.removeCallbacks(playbackPoll)
+        handler.removeCallbacks(hideControlsRunnable)
         binding.webView.stopLoading()
         binding.webView.destroy()
         super.onDestroy()
@@ -283,6 +344,8 @@ class IqiyiWebPlayerActivity : BaseActivity() {
         private const val DESKTOP_UA =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        private const val CONTROLS_HIDE_DELAY_MS = 5_000L
+        private const val SEEK_STEP_SECONDS = 10
         private const val MOBILE_UA =
             "Mozilla/5.0 (Linux; Android 9) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
@@ -309,6 +372,8 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                 '[class*="topbarXPlayer"]',
                 '[class*="configPage_configPageWrapper"]',
                 '[class*="configPage_configPage"]',
+                '[class*="danmu"]',
+                '[class*="Danmu"]',
                 '[class*="danmaku"]',
                 '[class*="Danmaku"]'
               ];
@@ -348,6 +413,24 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                 if (play && play.catch) play.catch(function() {});
               }
               window.dispatchEvent(new Event('resize'));
+              return 'ok';
+            })();
+        """
+
+        /** Keep the mobile player's danmaku below the player controls instead of oversized text. */
+        private const val DANMAKU_SIZE_JS = """
+            (function() {
+              var id = 'blbl-danmaku-size';
+              var style = document.getElementById(id);
+              if (!style) {
+                style = document.createElement('style');
+                style.id = id;
+                (document.head || document.documentElement).appendChild(style);
+              }
+              style.textContent =
+                '[class*="danmu"],[class*="Danmu"],[class*="danmaku"],[class*="Danmaku"]{' +
+                'font-size:3.2vh!important;line-height:1.2!important}' +
+                '[class*="danmu"] *,[class*="danmaku"] *{font-size:inherit!important}';
               return 'ok';
             })();
         """

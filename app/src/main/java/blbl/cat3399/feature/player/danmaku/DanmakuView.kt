@@ -397,7 +397,7 @@ class DanmakuView @JvmOverloads constructor(
         DanmakuConfig(
             enabled = true,
             opacity = 1f,
-            textSizeSp = 18f,
+            textSizeSp = 16f,
             fontWeight = DanmakuFontWeight.Bold,
             strokeWidthPx = 4,
             speedLevel = 4,

@@ -309,7 +309,18 @@ class AppPrefs(context: Context) {
         set(value) = prefs.edit().putFloat(KEY_DANMAKU_OPACITY, value).apply()
 
     var danmakuTextSizeSp: Float
-        get() = prefs.getFloat(KEY_DANMAKU_TEXT_SIZE_SP, 18f)
+        get() {
+            val stored = prefs.getFloat(KEY_DANMAKU_TEXT_SIZE_SP, DEFAULT_DANMAKU_TEXT_SIZE_SP)
+            // 18sp was the previous default and reads taller than the 48dp player buttons on TV.
+            if (!prefs.getBoolean(KEY_DANMAKU_TEXT_SIZE_MIGRATED, false)) {
+                prefs.edit().putBoolean(KEY_DANMAKU_TEXT_SIZE_MIGRATED, true).apply()
+                if (stored == 18f) {
+                    prefs.edit().putFloat(KEY_DANMAKU_TEXT_SIZE_SP, DEFAULT_DANMAKU_TEXT_SIZE_SP).apply()
+                    return DEFAULT_DANMAKU_TEXT_SIZE_SP
+                }
+            }
+            return stored
+        }
         set(value) = prefs.edit().putFloat(KEY_DANMAKU_TEXT_SIZE_SP, value).apply()
 
     var danmakuLaneDensity: String
@@ -1085,6 +1096,8 @@ class AppPrefs(context: Context) {
     }
 
     companion object {
+        /** Danmaku stays visually below the 48dp player control buttons. */
+        const val DEFAULT_DANMAKU_TEXT_SIZE_SP = 16f
         const val STARTUP_PAGE_HOME = "home"
         const val STARTUP_PAGE_CATEGORY = "category"
         const val STARTUP_PAGE_DYNAMIC = "dynamic"
@@ -1150,6 +1163,7 @@ class AppPrefs(context: Context) {
         private const val KEY_MAIN_MY_VISIBLE_TABS = "main_my_visible_tabs"
         private const val KEY_TOP_NAVIGATION_VISIBLE_KEYS = "top_navigation_visible_keys"
         private const val KEY_TOP_NAV_CATALOG_ADDED = "top_nav_catalog_added_v6"
+        private const val KEY_DANMAKU_TEXT_SIZE_MIGRATED = "danmaku_text_size_migrated_v2"
         private const val KEY_HISTORY_SOURCE = "my_history_source"
         private const val KEY_FOLLOWING_LIST_ORDER = "following_list_order"
         private const val KEY_DYNAMIC_FOLLOWING_RECENT_UPDATE_DOT_ENABLED = "dynamic_following_recent_update_dot_enabled"

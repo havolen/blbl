@@ -337,7 +337,7 @@
                         android:alpha="0.14"
                         android:background="?attr/blblOnPageBackdropSecondary" />
 
-                    <!-- 腾讯视频（本轮仅占位） -->
+                    <!-- 腾讯视频 -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="92dp"
@@ -358,8 +358,9 @@
                             android:layout_weight="1"
                             android:clickable="true"
                             android:focusable="true"
+                            android:nextFocusRight="@id/remove_tencent"
                             android:nextFocusUp="@id/account_mango"
-                            android:nextFocusDown="@id/btn_history"
+                            android:nextFocusDown="@id/account_youku"
                             android:stateListAnimator="@animator/blbl_focus_scale"
                             app:cardBackgroundColor="@color/blbl_my_account_card_bg"
                             app:cardCornerRadius="14dp"
@@ -421,6 +422,194 @@
                             app:rippleColor="?attr/blblAccentWeak">
                             <ImageView
                                 android:id="@+id/remove_tencent_icon"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_platform_remove"
+                                android:tint="?attr/blblDanger"
+                                android:contentDescription="@string/account_logout_action" />
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+
+                    <!-- 优酷 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="92dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="20dp">
+                        <TextView
+                            android:layout_width="184dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/platform_youku"
+                            android:textColor="?attr/blblOnPageBackdrop"
+                            android:textSize="20sp"
+                            android:fontFamily="sans-serif-medium" />
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/account_youku"
+                            android:layout_width="0dp"
+                            android:layout_height="68dp"
+                            android:layout_weight="1"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusRight="@id/remove_youku"
+                            android:nextFocusUp="@id/account_tencent"
+                            android:nextFocusDown="@id/account_douyin"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="12dp">
+                                <FrameLayout
+                                    android:layout_width="52dp"
+                                    android:layout_height="52dp">
+                                    <com.google.android.material.imageview.ShapeableImageView
+                                        android:id="@+id/logo_youku"
+                                        android:layout_width="52dp"
+                                        android:layout_height="52dp"
+                                        android:scaleType="centerCrop"
+                                        android:src="@drawable/ic_platform_youku"
+                                        android:contentDescription="@string/platform_youku"
+                                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay_Blbl_Circular" />
+                                    <ImageView
+                                        android:id="@+id/vip_youku"
+                                        android:layout_width="20dp"
+                                        android:layout_height="20dp"
+                                        android:layout_gravity="bottom|end"
+                                        android:src="@drawable/ic_vip_badge"
+                                        android:contentDescription="@string/vip_badge_description"
+                                        android:visibility="gone" />
+                                </FrameLayout>
+                                <TextView
+                                    android:id="@+id/name_youku"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="14dp"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/mango_account_logged_out"
+                                    android:textColor="@color/blbl_my_account_primary"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-medium" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/remove_youku"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="12dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusLeft="@id/account_youku"
+                            android:nextFocusUp="@id/remove_tencent"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <ImageView
+                                android:id="@+id/remove_youku_icon"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_platform_remove"
+                                android:tint="?attr/blblDanger"
+                                android:contentDescription="@string/account_logout_action" />
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+
+                    <!-- 抖音 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="92dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="20dp">
+                        <TextView
+                            android:layout_width="184dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/platform_douyin"
+                            android:textColor="?attr/blblOnPageBackdrop"
+                            android:textSize="20sp"
+                            android:fontFamily="sans-serif-medium" />
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/account_douyin"
+                            android:layout_width="0dp"
+                            android:layout_height="68dp"
+                            android:layout_weight="1"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusRight="@id/remove_douyin"
+                            android:nextFocusUp="@id/account_youku"
+                            android:nextFocusDown="@id/btn_history"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="12dp">
+                                <FrameLayout
+                                    android:layout_width="52dp"
+                                    android:layout_height="52dp">
+                                    <com.google.android.material.imageview.ShapeableImageView
+                                        android:id="@+id/logo_douyin"
+                                        android:layout_width="52dp"
+                                        android:layout_height="52dp"
+                                        android:scaleType="centerCrop"
+                                        android:src="@drawable/ic_platform_douyin"
+                                        android:contentDescription="@string/platform_douyin"
+                                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay_Blbl_Circular" />
+                                    <ImageView
+                                        android:id="@+id/vip_douyin"
+                                        android:layout_width="20dp"
+                                        android:layout_height="20dp"
+                                        android:layout_gravity="bottom|end"
+                                        android:src="@drawable/ic_vip_badge"
+                                        android:contentDescription="@string/vip_badge_description"
+                                        android:visibility="gone" />
+                                </FrameLayout>
+                                <TextView
+                                    android:id="@+id/name_douyin"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="14dp"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/mango_account_logged_out"
+                                    android:textColor="@color/blbl_my_account_primary"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-medium" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/remove_douyin"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="12dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:nextFocusLeft="@id/account_douyin"
+                            android:nextFocusUp="@id/remove_youku"
+                            android:stateListAnimator="@animator/blbl_focus_scale"
+                            app:cardBackgroundColor="@color/blbl_my_account_card_bg"
+                            app:cardCornerRadius="14dp"
+                            app:cardElevation="0dp"
+                            app:rippleColor="?attr/blblAccentWeak">
+                            <ImageView
+                                android:id="@+id/remove_douyin_icon"
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
                                 android:layout_gravity="center"

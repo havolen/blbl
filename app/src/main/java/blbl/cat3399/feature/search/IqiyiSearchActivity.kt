@@ -21,6 +21,8 @@ import blbl.cat3399.feature.player.IqiyiWebPlayerActivity
 import blbl.cat3399.feature.video.VideoCardAdapter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 
 /** Native grid for iQiyi web search results, using the same cards as Bilibili/Mango. */
 class IqiyiSearchActivity : BaseActivity() {
@@ -139,11 +141,14 @@ class IqiyiSearchActivity : BaseActivity() {
                     )
                     return@launch
                 }
+                val (playlistJson, playlistIndex) = nativePlaylist(item)
                 startActivity(
                     IqiyiPlayerActivity.intent(
                         context = this@IqiyiSearchActivity,
                         streamUrl = stream.url,
                         title = item.title,
+                        playlistJson = playlistJson,
+                        playlistIndex = playlistIndex,
                     ),
                 )
             } catch (cancelled: CancellationException) {
@@ -167,6 +172,26 @@ class IqiyiSearchActivity : BaseActivity() {
                 binding.progress.visibility = View.GONE
             }
         }
+    }
+
+    /**
+     * Snapshot the native (non-short) search results so the player can offer "next episode"
+     * without re-querying the search API.
+     */
+    private fun nativePlaylist(current: IqiyiSearchItem): Pair<String?, Int> {
+        val nativeItems = items.filter { !it.isShortVideo && it.tvId > 0L && it.videoId.isNotBlank() }
+        if (nativeItems.size < 2) return null to 0
+        val array = JSONArray()
+        nativeItems.forEach { entry ->
+            array.put(
+                JSONObject()
+                    .put("tvId", entry.tvId)
+                    .put("videoId", entry.videoId)
+                    .put("title", entry.title),
+            )
+        }
+        val index = nativeItems.indexOfFirst { it.tvId == current.tvId && it.videoId == current.videoId }
+        return array.toString() to index.coerceAtLeast(0)
     }
 
     private fun focusFirstItem() {

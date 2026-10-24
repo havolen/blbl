@@ -15,6 +15,8 @@ class PlatformVipStore(context: Context) {
         IQIYI("iqiyi"),
         MANGO("mango"),
         TENCENT("tencent"),
+        YOUKU("youku"),
+        DOUYIN("douyin"),
     }
 
     private val prefs: SharedPreferences =

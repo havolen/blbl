@@ -100,7 +100,7 @@ class MangoNativePlayerActivity : Activity() {
     private val danmakuConfig = DanmakuConfig(
         enabled = true,
         opacity = 1f,
-        textSizeSp = 18f,
+        textSizeSp = 16f,
         fontWeight = DanmakuFontWeight.Bold,
         strokeWidthPx = 4,
         speedLevel = 4,
@@ -211,8 +211,6 @@ class MangoNativePlayerActivity : Activity() {
         playPauseIcon = playPause
         val next = PlayerIconButton(uiContext, R.drawable.ic_player_next, "下一集") { playNextEpisode() }
         val playlist = PlayerIconButton(uiContext, R.drawable.ic_player_playlist, "播放列表") { showEpisodePicker() }
-        val back = PlayerIconButton(uiContext, R.drawable.ic_player_replay_10, "后退 10 秒") { seekBy(-10_000) }
-        val forward = PlayerIconButton(uiContext, R.drawable.ic_player_forward_10, "前进 10 秒") { seekBy(10_000) }
         val debugInfo = PlayerIconButton(uiContext, R.drawable.ic_player_debug, "调试信息") { toggleDebugInfo() }
         val hasWebViewReturn = intent.getBooleanExtra(MangoVideoActivity.EXTRA_HAS_WEB_VIEW_RETURN, false)
         val controls = LinearLayout(uiContext).apply {
@@ -223,7 +221,7 @@ class MangoNativePlayerActivity : Activity() {
         controlsScroll = PlayerControlBar.install(
             host = controls,
             sourceName = getString(R.string.player_source_mango),
-            actions = CommonPlayerActions(playPause, next, playlist, danmakuToggle, back, forward),
+            actions = CommonPlayerActions(playPause, next, playlist, danmakuToggle),
             siteActions = buildList {
                 add(debugInfo)
                 if (hasWebViewReturn) add(playerButton("WebView 播放器") { finish() })

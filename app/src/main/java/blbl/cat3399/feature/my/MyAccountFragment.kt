@@ -19,6 +19,8 @@ import blbl.cat3399.core.account.BiliSession
 import blbl.cat3399.core.account.IqiyiSessionStore
 import blbl.cat3399.core.account.MangoSessionStore
 import blbl.cat3399.core.account.PlatformVipStore
+import blbl.cat3399.core.account.WebLoginSite
+import blbl.cat3399.core.account.WebSiteSessionStore
 import blbl.cat3399.core.api.BiliApi
 import blbl.cat3399.core.api.IqiyiApi
 import blbl.cat3399.core.api.MangoAccountApi
@@ -35,6 +37,7 @@ import blbl.cat3399.databinding.FragmentMyAccountBinding
 import blbl.cat3399.feature.login.IqiyiLoginActivity
 import blbl.cat3399.feature.login.MangoLoginActivity
 import blbl.cat3399.feature.login.QrLoginActivity
+import blbl.cat3399.feature.login.WebQrLoginActivity
 import blbl.cat3399.ui.BackPressHandler
 import blbl.cat3399.feature.following.FollowingListActivity
 import blbl.cat3399.ui.MainNavigationHost
@@ -54,6 +57,9 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
     private lateinit var mangoAccountApi: MangoAccountApi
     private lateinit var iqiyiSessionStore: IqiyiSessionStore
     private lateinit var iqiyiApi: IqiyiApi
+    private lateinit var youkuSessionStore: WebSiteSessionStore
+    private lateinit var tencentSessionStore: WebSiteSessionStore
+    private lateinit var douyinSessionStore: WebSiteSessionStore
     private lateinit var vipStore: PlatformVipStore
     private var mangoRefreshJob: Job? = null
     private var iqiyiRefreshJob: Job? = null
@@ -153,6 +159,9 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         mangoAccountApi = MangoAccountApi(mangoSessionStore)
         iqiyiSessionStore = IqiyiSessionStore(requireContext())
         iqiyiApi = IqiyiApi(iqiyiSessionStore.cookies)
+        youkuSessionStore = WebSiteSessionStore(requireContext(), WebLoginSite.YOUKU)
+        tencentSessionStore = WebSiteSessionStore(requireContext(), WebLoginSite.TENCENT)
+        douyinSessionStore = WebSiteSessionStore(requireContext(), WebLoginSite.DOUYIN)
     }
 
     private fun bindOverviewActions() {
@@ -177,6 +186,8 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
                 binding.accountIqiyi to binding.nameIqiyi,
                 binding.accountMango to binding.nameMango,
                 binding.accountTencent to binding.nameTencent,
+                binding.accountYouku to binding.nameYouku,
+                binding.accountDouyin to binding.nameDouyin,
             )
         cells.forEach { (cell, name) ->
             cell.setOnFocusChangeListener { _, focused ->
@@ -189,6 +200,8 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
             binding.removeIqiyi,
             binding.removeMango,
             binding.removeTencent,
+            binding.removeYouku,
+            binding.removeDouyin,
         ).forEach { remove ->
             remove.setOnFocusChangeListener { _, focused -> if (focused) lastActionId = remove.id }
         }
@@ -204,6 +217,9 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         val iqiyiKey = PlatformVipStore.platformKey(iqiyi?.uid)
         val iqiyiWebsiteVip = if (iqiyi != null && iqiyi.uid == iqiyiLiveUid) iqiyiLiveVip else null
         val mangoWebsiteVip = if (mango != null && mango.uid == mangoLiveUid) mangoLiveVip else null
+        val youku = youkuSessionStore.currentAccount()
+        val tencent = tencentSessionStore.currentAccount()
+        val douyin = douyinSessionStore.currentAccount()
         return listOf(
             PlatformState(
                 platform = AccountPlatform.BILIBILI,
@@ -243,9 +259,25 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
             ),
             PlatformState(
                 platform = AccountPlatform.TENCENT,
-                loggedIn = false,
-                name = null,
-                accountKey = PlatformVipStore.DEFAULT_ACCOUNT_KEY,
+                loggedIn = tencent != null,
+                name = tencent?.username,
+                accountKey = PlatformVipStore.platformKey(tencent?.uid),
+                websiteVip = null,
+                effectiveVip = false,
+            ),
+            PlatformState(
+                platform = AccountPlatform.YOUKU,
+                loggedIn = youku != null,
+                name = youku?.username,
+                accountKey = PlatformVipStore.platformKey(youku?.uid),
+                websiteVip = null,
+                effectiveVip = false,
+            ),
+            PlatformState(
+                platform = AccountPlatform.DOUYIN,
+                loggedIn = douyin != null,
+                name = douyin?.username,
+                accountKey = PlatformVipStore.platformKey(douyin?.uid),
                 websiteVip = null,
                 effectiveVip = false,
             ),
@@ -283,6 +315,20 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
             badge = b.vipTencent,
             remove = b.removeTencent,
         )
+        bindRow(
+            state = states.getValue(AccountPlatform.YOUKU),
+            name = b.nameYouku,
+            logo = b.logoYouku,
+            badge = b.vipYouku,
+            remove = b.removeYouku,
+        )
+        bindRow(
+            state = states.getValue(AccountPlatform.DOUYIN),
+            name = b.nameDouyin,
+            logo = b.logoDouyin,
+            badge = b.vipDouyin,
+            remove = b.removeDouyin,
+        )
     }
 
     private fun bindRow(
@@ -301,14 +347,14 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         logo.setImageResource(if (state.loggedIn) state.platform.logoRes else R.drawable.ic_platform_add)
         logo.contentDescription = if (state.loggedIn) platformTitle(state.platform) else getString(R.string.account_row_login_description_fmt, platformTitle(state.platform))
         badge.visibility = if (state.loggedIn && state.effectiveVip) View.VISIBLE else View.GONE
-        remove.visibility = if (state.loggedIn && state.platform != AccountPlatform.TENCENT) View.VISIBLE else View.GONE
+        remove.visibility = if (state.loggedIn) View.VISIBLE else View.GONE
         remove.contentDescription = getString(R.string.account_remove_description_fmt, platformTitle(state.platform))
         val cell = cellFor(state.platform)
         cell.setOnClickListener {
             if (state.loggedIn) showAccountDialog(state.platform) else launchLogin(state.platform)
         }
         remove.setOnClickListener {
-            if (state.loggedIn && state.platform != AccountPlatform.TENCENT) confirmLogout(state.platform)
+            if (state.loggedIn) confirmLogout(state.platform)
         }
     }
 
@@ -317,6 +363,8 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         AccountPlatform.IQIYI -> binding.accountIqiyi
         AccountPlatform.MANGO -> binding.accountMango
         AccountPlatform.TENCENT -> binding.accountTencent
+        AccountPlatform.YOUKU -> binding.accountYouku
+        AccountPlatform.DOUYIN -> binding.accountDouyin
     }
 
     private fun removeFor(platform: AccountPlatform): View = when (platform) {
@@ -324,15 +372,18 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         AccountPlatform.IQIYI -> binding.removeIqiyi
         AccountPlatform.MANGO -> binding.removeMango
         AccountPlatform.TENCENT -> binding.removeTencent
+        AccountPlatform.YOUKU -> binding.removeYouku
+        AccountPlatform.DOUYIN -> binding.removeDouyin
     }
 
     private fun launchLogin(platform: AccountPlatform) {
-        if (platform == AccountPlatform.TENCENT) return
         val intent = when (platform) {
             AccountPlatform.BILIBILI -> Intent(requireContext(), QrLoginActivity::class.java)
             AccountPlatform.IQIYI -> Intent(requireContext(), IqiyiLoginActivity::class.java)
             AccountPlatform.MANGO -> Intent(requireContext(), MangoLoginActivity::class.java)
-            AccountPlatform.TENCENT -> return
+            AccountPlatform.TENCENT -> WebQrLoginActivity.intent(requireContext(), WebLoginSite.TENCENT)
+            AccountPlatform.YOUKU -> WebQrLoginActivity.intent(requireContext(), WebLoginSite.YOUKU)
+            AccountPlatform.DOUYIN -> WebQrLoginActivity.intent(requireContext(), WebLoginSite.DOUYIN)
         }
         pendingLoginFocusPlatform = platform
         loginLauncher.launch(intent)
@@ -405,7 +456,6 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
     }
 
     private fun showAccountDialog(platform: AccountPlatform) {
-        if (platform == AccountPlatform.TENCENT) return
         accountDialog?.dismiss()
         accountDialogPlatform = platform
         val dialogContext = requireActivity().userScaledContext()
@@ -654,7 +704,17 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
                 iqiyiLiveVip = null
             }
 
-            AccountPlatform.TENCENT -> return
+            AccountPlatform.TENCENT -> {
+                tencentSessionStore.clear()
+            }
+
+            AccountPlatform.YOUKU -> {
+                youkuSessionStore.clear()
+            }
+
+            AccountPlatform.DOUYIN -> {
+                douyinSessionStore.clear()
+            }
         }
         renderTable()
         requestPlatformFocus(platform)
@@ -820,6 +880,8 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         IQIYI(R.string.platform_iqiyi, R.drawable.ic_platform_iqiyi, PlatformVipStore.Platform.IQIYI),
         MANGO(R.string.platform_mango, R.drawable.ic_platform_mango, PlatformVipStore.Platform.MANGO),
         TENCENT(R.string.platform_tencent, R.drawable.ic_platform_tencent, PlatformVipStore.Platform.TENCENT),
+        YOUKU(R.string.platform_youku, R.drawable.ic_platform_youku, PlatformVipStore.Platform.YOUKU),
+        DOUYIN(R.string.platform_douyin, R.drawable.ic_platform_douyin, PlatformVipStore.Platform.DOUYIN),
     }
 
     private fun platformTitle(platform: AccountPlatform): String = getString(platform.titleRes)

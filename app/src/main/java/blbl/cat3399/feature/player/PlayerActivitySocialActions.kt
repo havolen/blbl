@@ -25,8 +25,6 @@ internal fun PlayerActivity.applyOsdButtonsVisibility() {
     binding.btnPrev.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_PREV)) View.VISIBLE else View.GONE
     binding.btnPlayPause.visibility = View.VISIBLE
     binding.btnNext.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_NEXT)) View.VISIBLE else View.GONE
-    binding.btnReplay10.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_REPLAY_10)) View.VISIBLE else View.GONE
-    binding.btnForward10.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_FORWARD_10)) View.VISIBLE else View.GONE
     binding.btnSubtitle.visibility = if (subtitleSupported && enabled.contains(AppPrefs.PLAYER_OSD_BTN_SUBTITLE)) View.VISIBLE else View.GONE
     binding.btnDanmaku.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_DANMAKU)) View.VISIBLE else View.GONE
     binding.btnDetail.visibility = if (enabled.contains(AppPrefs.PLAYER_OSD_BTN_DETAIL)) View.VISIBLE else View.GONE

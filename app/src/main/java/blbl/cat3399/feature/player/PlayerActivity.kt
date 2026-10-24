@@ -2064,8 +2064,6 @@ class PlayerActivity : BaseActivity() {
                 next = binding.btnNext,
                 playlist = binding.btnListPanel,
                 danmaku = binding.btnDanmaku,
-                replay10 = binding.btnReplay10,
-                forward10 = binding.btnForward10,
             ),
             siteActions = listOf(
                 binding.btnPrev,
@@ -2102,14 +2100,6 @@ class PlayerActivity : BaseActivity() {
         }
         binding.btnNext.setOnClickListener {
             playNextByPlaybackMode(userInitiated = true)
-            setControlsVisible(true)
-        }
-        binding.btnReplay10.setOnClickListener {
-            seekRelative(-10_000L)
-            setControlsVisible(true)
-        }
-        binding.btnForward10.setOnClickListener {
-            seekRelative(10_000L)
             setControlsVisible(true)
         }
 

@@ -54,6 +54,11 @@
 	            android:exported="false"
 	            android:screenOrientation="sensorLandscape" />
 	        <activity
+	            android:name=".feature.login.WebQrLoginActivity"
+	            android:configChanges="keyboardHidden|orientation|screenSize"
+	            android:exported="false"
+	            android:screenOrientation="sensorLandscape" />
+	        <activity
 	            android:name=".feature.search.IqiyiSearchActivity"
 	            android:exported="false"
 	            android:screenOrientation="sensorLandscape" />
