@@ -57,7 +57,7 @@ class IqiyiHistoryApi(
         val request =
             Request.Builder()
                 .url(url)
-                .header("Accept", "application/json, text/plain, */*")
+                .header("Accept", "text/plain, */*")
                 .header("Referer", "https://www.iqiyi.com/")
                 .header("User-Agent", USER_AGENT)
                 .get()
@@ -67,7 +67,7 @@ class IqiyiHistoryApi(
                 if (!response.isSuccessful) throw IOException("爱奇艺历史 HTTP ${response.code}")
                 response.body?.string().orEmpty()
             }
-        val root = withContext(Dispatchers.Default) { JSONObject(body) }
+        val root = withContext(Dispatchers.Default) { JSONObject(unwrapJsonString(body)) }
         if (root.optString("code") != "A00000") throw IqiyiLoginRequiredException()
         val data = root.optJSONObject("data") ?: JSONObject()
         val total = data.optInt("total", 0)
@@ -106,6 +106,13 @@ class IqiyiHistoryApi(
             items = items,
             hasMore = pageNum.coerceAtLeast(1) * PAGE_SIZE < total,
         )
+    }
+
+    /** The history endpoint sometimes returns a JSON string containing the JSON object. */
+    private fun unwrapJsonString(body: String): String {
+        val raw = body.trim()
+        if (!raw.startsWith("\"")) return raw
+        return runCatching { JSONObject("{\"v\":$raw}").optString("v") }.getOrDefault(raw)
     }
 
     private fun normalizeUrl(value: String): String {
