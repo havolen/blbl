@@ -32,20 +32,6 @@ class PlatformVipStore(context: Context) {
         write(key, vip)
     }
 
-    fun siteVip(
-        platform: Platform,
-        accountKey: String,
-    ): Boolean? = read(KEY_SITE_PREFIX + storageKey(platform, accountKey))
-
-    fun setSiteVip(
-        platform: Platform,
-        accountKey: String,
-        vip: Boolean?,
-    ) {
-        if (vip == null) return
-        write(KEY_SITE_PREFIX + storageKey(platform, accountKey), vip)
-    }
-
     fun effectiveVip(
         platform: Platform,
         accountKey: String,
@@ -56,11 +42,7 @@ class PlatformVipStore(context: Context) {
         platform: Platform,
         accountKey: String,
     ) {
-        val key = storageKey(platform, accountKey)
-        prefs.edit()
-            .remove(KEY_OVERRIDE_PREFIX + key)
-            .remove(KEY_SITE_PREFIX + key)
-            .apply()
+        prefs.edit().remove(KEY_OVERRIDE_PREFIX + storageKey(platform, accountKey)).apply()
     }
 
     private fun read(key: String): Boolean? =
@@ -87,7 +69,6 @@ class PlatformVipStore(context: Context) {
     companion object {
         private const val PREFS_NAME = "blbl_platform_vip"
         private const val KEY_OVERRIDE_PREFIX = "override:"
-        private const val KEY_SITE_PREFIX = "site:"
         const val DEFAULT_ACCOUNT_KEY = "default"
 
         fun bilibiliKey(mid: Long?): String = mid?.takeIf { it > 0L }?.let { "mid:$it" } ?: DEFAULT_ACCOUNT_KEY

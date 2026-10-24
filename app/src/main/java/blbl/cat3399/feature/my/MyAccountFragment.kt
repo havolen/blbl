@@ -574,7 +574,8 @@ class MyAccountFragment : Fragment(), BackPressHandler, TabContentSwitchFocusHos
         val list = b.accountList
         list.removeAllViews()
         for (account in BiliClient.accounts.accounts()) {
-            val row = layoutInflater.inflate(R.layout.item_account_switch_row, list, false) as TextView
+            val row = LayoutInflater.from(requireActivity().userScaledContext())
+                .inflate(R.layout.item_account_switch_row, list, false) as TextView
             row.text = account.name + if (account.isActive) "（当前）" else ""
             row.setOnClickListener {
                 if (account.isActive) return@setOnClickListener
