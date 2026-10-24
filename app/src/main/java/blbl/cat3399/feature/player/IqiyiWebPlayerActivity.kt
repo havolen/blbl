@@ -16,7 +16,6 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import blbl.cat3399.BuildConfig
 import blbl.cat3399.core.account.IqiyiSessionStore
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.net.BiliClient
@@ -39,8 +38,6 @@ class IqiyiWebPlayerActivity : BaseActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var desktopMode = false
     private var controlsVisible = true
-    private var nativeHandoffStarted = false
-    private var pageTitle = ""
     private val hideControlsRunnable = Runnable { setControlsVisible(false) }
     private val playbackPoll =
         object : Runnable {
@@ -60,7 +57,6 @@ class IqiyiWebPlayerActivity : BaseActivity() {
 
         val url = intent.getStringExtra(EXTRA_URL)?.trim().orEmpty()
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
-        pageTitle = title
         desktopMode = intent.getBooleanExtra(EXTRA_DESKTOP, false)
         if (url.isBlank()) {
             finish()
@@ -71,7 +67,6 @@ class IqiyiWebPlayerActivity : BaseActivity() {
         setupControls()
 
         installIqiyiCookies()
-        if (BuildConfig.DEBUG) android.webkit.WebView.setWebContentsDebuggingEnabled(true)
         binding.webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -112,26 +107,6 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                     request: WebResourceRequest?,
                 ): WebResourceResponse? {
                     val req = request ?: return null
-                    // The web player already holds the signed VIP stream URL. Hand that URL to
-                    // ExoPlayer instead of decoding 1080P with the old WebView's MSE player.
-                    if (!nativeHandoffStarted &&
-                        req.url.path.orEmpty().endsWith(".m3u8") &&
-                        (req.url.host == "meta-cdn.video.iqiyi.com" || req.url.getQueryParameter("qd_tvid") != null)
-                    ) {
-                        nativeHandoffStarted = true
-                        val nativeUrl = req.url.toString()
-                        AppLog.i("IqiyiWebPlayer", "handoff native m3u8 host=${req.url.host}")
-                        runOnUiThread {
-                            startActivity(
-                                IqiyiPlayerActivity.intent(
-                                    this@IqiyiWebPlayerActivity,
-                                    nativeUrl,
-                                    pageTitle,
-                                ),
-                            )
-                            finish()
-                        }
-                    }
                     if (!desktopMode) return null
                     if (!req.isForMainFrame) return null
                     val target = req.url
