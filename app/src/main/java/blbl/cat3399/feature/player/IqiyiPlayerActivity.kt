@@ -74,7 +74,7 @@ class IqiyiPlayerActivity : BaseActivity() {
             binding.controlsRow.addView(button, params)
         }
         val source = android.widget.TextView(this).apply {
-            text = "爱奇艺"
+            text = getString(R.string.platform_iqiyi)
             textSize = 16f
             setTextColor(androidx.core.content.ContextCompat.getColorStateList(context, R.color.player_osd_icon_tint))
             gravity = Gravity.CENTER

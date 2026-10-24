@@ -10,12 +10,10 @@ import blbl.cat3399.R
 
 /** Tencent Video history is a placeholder until its authenticated history API is wired. */
 class TencentHistoryFragment : Fragment(), MyTabSwitchFocusTarget {
-    private var _binding: View? = null
     private var placeholder: TextView? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val view = inflater.inflate(R.layout.fragment_tencent_history, container, false)
-        _binding = view
         placeholder = view.findViewById(R.id.tv_tencent_history_placeholder)
         return view
     }
@@ -24,7 +22,6 @@ class TencentHistoryFragment : Fragment(), MyTabSwitchFocusTarget {
         placeholder?.requestFocus() == true
 
     override fun onDestroyView() {
-        _binding = null
         placeholder = null
         super.onDestroyView()
     }

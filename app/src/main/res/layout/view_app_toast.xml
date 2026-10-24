@@ -10,23 +10,15 @@
     app:cardCornerRadius="14dp"
     app:cardElevation="8dp">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/tv_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
+        android:ellipsize="end"
+        android:lineSpacingExtra="1dp"
+        android:maxLines="3"
         android:paddingHorizontal="16dp"
-        android:paddingVertical="12dp">
-
-
-        <TextView
-            android:id="@+id/tv_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:lineSpacingExtra="1dp"
-            android:maxLines="3"
-            android:textColor="@android:color/black"
-            android:textSize="14sp" />
-    </LinearLayout>
+        android:paddingVertical="12dp"
+        android:textColor="@android:color/black"
+        android:textSize="14sp" />
 </com.google.android.material.card.MaterialCardView>
