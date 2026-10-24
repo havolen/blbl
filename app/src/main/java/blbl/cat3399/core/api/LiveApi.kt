@@ -249,7 +249,7 @@ internal object LiveApi {
                 "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
                 mapOf(
                     "room_id" to roomId.toString(),
-                    // B 站直播间的可用直播流组合会动态变化；不少房间只返回 http_hls/fmp4(m3u8)。
+                    // 哔哩哔哩直播间的可用直播流组合会动态变化；不少房间只返回 http_hls/fmp4(m3u8)。
                     // 为提高兼容性，按官方文档传多选，让服务端返回可用集合，再在客户端挑最合适的组合。
                     "protocol" to "0,1", // 0=http_stream, 1=http_hls
                     "format" to "0,1,2", // 0=flv, 1=ts, 2=fmp4

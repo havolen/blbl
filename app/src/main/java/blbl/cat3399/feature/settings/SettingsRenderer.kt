@@ -238,6 +238,7 @@ class SettingsRenderer(
                 listOf(
                     SettingEntry(SettingId.StartupPage, "启动默认页", SettingsText.startupPageText(activity, prefs.startupPage), null),
                     SettingEntry(SettingId.TopNavigationItems, "侧边导航显示项", "${prefs.topNavigationVisibleKeys.size}/13 项显示", null),
+                    SettingEntry(SettingId.ResetTopNavigationItems, "恢复默认侧边导航", "恢复收藏、历史等默认入口", null),
                     SettingEntry(SettingId.GridSpanCount, "每行卡片数量", SettingsText.gridSpanText(prefs.gridSpanCount), null),
                     SettingEntry(
                         SettingId.DynamicGridSpanCount,
@@ -473,7 +474,7 @@ class SettingsRenderer(
                     SettingEntry(SettingId.DanmakuArea, "弹幕占屏比", SettingsText.areaText(prefs.danmakuArea), null),
                     SettingEntry(SettingId.DanmakuLaneDensity, "轨道密度", SettingsText.danmakuLaneDensityText(prefs.danmakuLaneDensity), null),
                     SettingEntry(SettingId.DanmakuSpeed, "弹幕速度", prefs.danmakuSpeed.toString(), null),
-                    SettingEntry(SettingId.DanmakuFollowBiliShield, "跟随B站弹幕屏蔽", if (prefs.danmakuFollowBiliShield) "开" else "关", null),
+                    SettingEntry(SettingId.DanmakuFollowBiliShield, "跟随哔哩哔哩弹幕屏蔽", if (prefs.danmakuFollowBiliShield) "开" else "关", null),
                     SettingEntry(SettingId.DanmakuShowHighLikeIcon, "显示高赞弹幕图标", if (prefs.danmakuShowHighLikeIcon) "开" else "关", null),
                     SettingEntry(SettingId.DanmakuAiShieldEnabled, "智能云屏蔽", if (prefs.danmakuAiShieldEnabled) "开" else "关", null),
                     SettingEntry(SettingId.DanmakuAiShieldLevel, "智能云屏蔽等级", SettingsText.aiLevelText(prefs.danmakuAiShieldLevel), null),

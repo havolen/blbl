@@ -10,6 +10,7 @@ import blbl.cat3399.R
 import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.model.BangumiSeason
 import blbl.cat3399.core.ui.FocusTreeUtils
+import blbl.cat3399.core.ui.AppToast
 import blbl.cat3399.core.ui.QrCodeBitmap
 import blbl.cat3399.databinding.FragmentSearchBinding
 import blbl.cat3399.feature.my.BangumiDetailActivity
@@ -137,6 +138,23 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
         openMangoSearch(state.query)
     }
 
+    internal fun openIqiyiSearch() {
+        openIqiyiSearch(state.query)
+    }
+
+    internal fun openIqiyiSearch(keyword: String) {
+        val query = keyword.trim()
+        if (query.isBlank() || !isAdded) return
+        startActivity(
+            Intent(requireContext(), IqiyiSearchActivity::class.java)
+                .putExtra(IqiyiSearchActivity.EXTRA_QUERY, query),
+        )
+    }
+
+    internal fun openTencentSearch() {
+        AppToast.show(requireContext(), getString(R.string.tencent_search_unavailable))
+    }
+
     internal fun openMangoSearch(keyword: String) {
         val query = keyword.trim()
         if (query.isBlank() || !isAdded) return
@@ -159,7 +177,7 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
         }
         if (phoneUrl != url) {
             phoneUrl = url
-            val sizePx = (resources.displayMetrics.density * 220f).toInt().coerceAtLeast(1)
+            val sizePx = (resources.displayMetrics.density * 200f).toInt().coerceAtLeast(1)
             b.ivPhoneQr.setImageBitmap(QrCodeBitmap.encode(url, sizePx))
             b.ivPhoneQr.contentDescription = getString(R.string.search_phone_title)
             b.tvPhoneUrl.text = getString(R.string.search_phone_url, url)
@@ -183,6 +201,7 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
                 interactor?.setQuery(text)
                 when (engine) {
                     PhoneSearchServer.Engine.BILI -> interactor?.performSearch()
+                    PhoneSearchServer.Engine.IQIYI -> openIqiyiSearch(text)
                     PhoneSearchServer.Engine.MANGO -> openMangoSearch(text)
                 }
             }

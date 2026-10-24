@@ -102,7 +102,7 @@
     <string name="search_user_action_open_profile">查看主页</string>
     <string name="search_unsupported">该分类暂未实现</string>
     <string name="search_no_results">没有找到相关结果</string>
-    <string name="search_action_bili">搜 B 站</string>
+    <string name="search_action_bili">搜哔哩哔哩</string>
     <string name="search_action_mango">搜芒果</string>
     <string name="search_action_phone">扫码输入</string>
     <string name="search_switch_to_keyboard">切换到软键盘</string>
@@ -233,4 +233,24 @@
     <string name="iqiyi_login_account_fmt">已登录：%1$s（%2$s）</string>
     <string name="iqiyi_login_refresh">刷新二维码</string>
     <string name="iqiyi_login_clear">退出登录</string>
+
+    <string name="search_action_iqiyi">搜爱奇艺</string>
+    <string name="search_action_tencent">搜腾讯</string>
+    <string name="tencent_search_unavailable">腾讯视频搜索暂未支持</string>
+
+    <string name="iqiyi_search_title">爱奇艺搜索</string>
+    <string name="iqiyi_search_back">返回</string>
+    <string name="iqiyi_search_empty">没有找到爱奇艺相关结果</string>
+    <string name="iqiyi_search_loading_failed">爱奇艺搜索失败，请重试</string>
+    <string name="iqiyi_search_resolving">正在解析爱奇艺播放地址…</string>
+    <string name="iqiyi_search_play_failed">爱奇艺播放地址解析失败</string>
+    <string name="iqiyi_player_title">爱奇艺播放</string>
+    <string name="iqiyi_player_exit">退出播放器</string>
+    <string name="iqiyi_player_failed">播放失败：%1$s</string>
+
+    <string name="history_source_iqiyi">爱奇艺</string>
+    <string name="history_source_tencent">腾讯视频</string>
+    <string name="iqiyi_history_login_prompt">登录爱奇艺后查看观看历史</string>
+    <string name="iqiyi_history_empty">还没有爱奇艺观看记录</string>
+    <string name="tencent_history_unavailable">腾讯视频历史暂未支持</string>
 </resources>

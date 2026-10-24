@@ -321,22 +321,36 @@ class SearchRenderer internal constructor(
                     true
                 }
 
-                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    binding.btnSearchMango.requestFocus()
-                    true
-                }
-
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    binding.btnInputMode.requestFocus()
+                    binding.btnSearchIqiyi.requestFocus()
                     true
                 }
 
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    if (isResultsVisible()) {
-                        focusFirstResultCard()
-                    } else {
-                        focusHistoryAt(0) || focusHotAt(0)
-                    }
+                    binding.btnSearchMango.requestFocus()
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+        binding.btnSearchIqiyi.setOnClickListener { fragment.openIqiyiSearch() }
+        binding.btnSearchIqiyi.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    binding.tvQuery.requestFocus()
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    binding.btnSearch.requestFocus()
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    binding.btnSearchTencent.requestFocus()
                     true
                 }
 
@@ -349,24 +363,40 @@ class SearchRenderer internal constructor(
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             when (keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP -> {
-                    binding.tvQuery.requestFocus()
-                    true
-                }
-
-                KeyEvent.KEYCODE_DPAD_LEFT -> true
-                KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     binding.btnSearch.requestFocus()
                     true
                 }
 
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    binding.btnSearchTencent.requestFocus()
+                    true
+                }
+
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    if (isResultsVisible()) {
-                        focusFirstResultCard()
-                    } else if (state.keyboardVisible) {
-                        focusFirstKey()
-                    } else {
-                        focusHistoryAt(0) || focusHotAt(0)
-                    }
+                    binding.btnInputMode.requestFocus()
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+        binding.btnSearchTencent.setOnClickListener { fragment.openTencentSearch() }
+        binding.btnSearchTencent.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    binding.btnSearchIqiyi.requestFocus()
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    binding.btnSearchMango.requestFocus()
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    binding.btnInputMode.requestFocus()
                     true
                 }
 
@@ -379,16 +409,10 @@ class SearchRenderer internal constructor(
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             when (keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP -> {
-                    binding.tvQuery.requestFocus()
+                    binding.btnSearchMango.requestFocus()
                     true
                 }
 
-                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    binding.btnSearch.requestFocus()
-                    true
-                }
-
-                KeyEvent.KEYCODE_DPAD_RIGHT -> true
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
                     if (isResultsVisible()) {
                         focusFirstResultCard()
@@ -532,11 +556,7 @@ class SearchRenderer internal constructor(
 
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
                     if (imeEditMode) return@setOnKeyListener false
-                    if (state.keyboardVisible) {
-                        focusLastKey()
-                    } else {
-                        binding.btnSearchMango.requestFocus()
-                    }
+                    binding.btnSearch.requestFocus()
                     true
                 }
 
@@ -1379,21 +1399,23 @@ class SearchRenderer internal constructor(
         rescaleMargins(binding.panelKeyboard, start = true, top = false, end = true, bottom = false)
         rescaleMargins(binding.recyclerKeys, start = false, top = true, end = false, bottom = false)
 
-        listOf(binding.btnClear, binding.btnBackspace, binding.btnSearch, binding.btnSearchMango, binding.btnInputMode, binding.btnClearHistory, binding.btnSort).forEach(::rescaleCard)
+        listOf(binding.btnClear, binding.btnBackspace, binding.btnSearch, binding.btnSearchIqiyi, binding.btnSearchMango, binding.btnSearchTencent, binding.btnInputMode, binding.btnClearHistory, binding.btnSort).forEach(::rescaleCard)
 
-        listOf(binding.btnClear, binding.btnBackspace, binding.btnSearch, binding.btnSearchMango, binding.btnInputMode, binding.btnClearHistory, binding.btnSort).forEach { btn ->
+        listOf(binding.btnClear, binding.btnBackspace, binding.btnSearch, binding.btnSearchIqiyi, binding.btnSearchMango, binding.btnSearchTencent, binding.btnInputMode, binding.btnClearHistory, binding.btnSort).forEach { btn ->
             rescaleLayoutSize(btn, width = false, height = true)
         }
         rescaleMargins(binding.btnClear, start = false, top = false, end = true, bottom = false)
-        rescaleMargins(binding.btnSearch, start = true, top = false, end = false, bottom = false)
-        rescaleMargins(binding.btnInputMode, start = true, top = false, end = false, bottom = false)
+        rescaleMargins(binding.btnSearchIqiyi, start = true, top = false, end = false, bottom = false)
+        rescaleMargins(binding.btnSearchTencent, start = true, top = false, end = false, bottom = false)
         rescaleMargins(binding.btnClearHistory, start = false, top = true, end = false, bottom = false)
         rescaleMargins(binding.btnSort, start = false, top = false, end = true, bottom = false)
 
         (binding.btnClear.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
         (binding.btnBackspace.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
         (binding.btnSearch.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
+        (binding.btnSearchIqiyi.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
         (binding.btnSearchMango.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
+        (binding.btnSearchTencent.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
         rescaleTextSize(binding.tvInputModeLabel)
         (binding.btnClearHistory.getChildAt(0) as? TextView)?.let(::rescaleTextSize)
 

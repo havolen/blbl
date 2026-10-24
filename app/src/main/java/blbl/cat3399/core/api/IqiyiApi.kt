@@ -36,6 +36,13 @@ class IqiyiApi(
         val vip: Boolean?,
     )
 
+    data class Stream(
+        val url: String,
+        val qualityLabel: String,
+        val width: Int,
+        val durationSec: Int,
+    )
+
     sealed interface PollResult {
         data object Waiting : PollResult
         data object Expired : PollResult
@@ -122,6 +129,86 @@ class IqiyiApi(
                 parseProfile(json.optJSONObject("data"))
             }
         } catch (t: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Resolves an iQiyi HLS stream for a search/history item.
+     *
+     * The public web player uses the same time+vid signature; the returned playlist is a
+     * short-lived but unencrypted HLS manifest (segment URLs are signed by iQiyi).
+     */
+    suspend fun resolveStream(
+        tvId: Long,
+        videoId: String,
+    ): Stream? {
+        if (tvId <= 0L || videoId.isBlank()) return null
+        val timestamp = System.currentTimeMillis()
+        val signature = md5("$timestamp$VMS_KEY$videoId")
+        val url =
+            VMS_URL.toHttpUrl().newBuilder()
+                .addPathSegment(tvId.toString())
+                .addPathSegment(videoId)
+                .addPathSegment("")
+                .addQueryParameter("t", timestamp.toString())
+                .addQueryParameter("sc", signature)
+                .addQueryParameter("src", VMS_SRC)
+                .build()
+        val request =
+            Request.Builder()
+                .url(url)
+                .header("Accept", "application/json, text/plain, */*")
+                .header("Referer", SITE_ORIGIN + "/")
+                .header("User-Agent", USER_AGENT)
+                .get()
+                .build()
+        return try {
+            client.newCall(request).await().use { response ->
+                if (!response.isSuccessful) return null
+                val body = withContext(Dispatchers.IO) { response.body?.string().orEmpty() }
+                val json = withContext(Dispatchers.Default) { JSONObject(body) }
+                if (json.optString("code") != API_SUCCESS) return null
+                val data = json.optJSONObject("data") ?: return null
+                val duration = data.optInt("duration", 0)
+                val candidates = ArrayList<StreamCandidate>()
+                val streams = data.optJSONArray("vidl")
+                if (streams != null) {
+                    for (i in 0 until streams.length()) {
+                        val item = streams.optJSONObject(i) ?: continue
+                        val m3u = item.optString("m3u", "").trim()
+                        if (m3u.isBlank()) continue
+                        val screen = item.optString("screenSize", "")
+                        val (width, height) = parseScreenSize(screen)
+                        val vd = item.optInt("vd", 0)
+                        candidates += StreamCandidate(
+                            url = preferHttps(m3u),
+                            width = width,
+                            height = height,
+                            vd = vd,
+                            label = screen.ifBlank { if (width > 0) "${width}x$height" else "iQiyi" },
+                        )
+                    }
+                }
+                val fallback = data.optString("m3u", "").trim()
+                if (candidates.isEmpty() && fallback.isNotBlank()) {
+                    val (width, height) = parseScreenSize(data.optString("screenSize", ""))
+                    candidates += StreamCandidate(
+                        url = preferHttps(fallback),
+                        width = width,
+                        height = height,
+                        vd = 0,
+                        label = data.optString("screenSize", "iQiyi"),
+                    )
+                }
+                val best = candidates.maxWithOrNull(
+                    compareBy<StreamCandidate> { it.width * 1000 + it.height }
+                        .thenBy { if (it.vd in H265_VD) 0 else 1 },
+                ) ?: return null
+                Stream(best.url, best.label, best.width, duration)
+            }
+        } catch (t: Throwable) {
+            if (t is kotlinx.coroutines.CancellationException) throw t
             null
         }
     }
@@ -250,6 +337,28 @@ class IqiyiApi(
         cookies.upsert(cookie)
     }
 
+    private data class StreamCandidate(
+        val url: String,
+        val width: Int,
+        val height: Int,
+        val vd: Int,
+        val label: String,
+    )
+
+    private fun parseScreenSize(value: String): Pair<Int, Int> {
+        val parts = value.lowercase().split('x')
+        if (parts.size != 2) return 0 to 0
+        return (parts[0].toIntOrNull() ?: 0) to (parts[1].toIntOrNull() ?: 0)
+    }
+
+    private fun preferHttps(url: String): String =
+        if (url.startsWith("http://", ignoreCase = true)) "https://" + url.substring(7) else url
+
+    private fun md5(value: String): String {
+        val digest = java.security.MessageDigest.getInstance("MD5").digest(value.toByteArray(Charsets.UTF_8))
+        return digest.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+    }
+
     private companion object {
         const val API_SUCCESS = "A00000"
         const val AGENT_TYPE = "13"
@@ -263,6 +372,10 @@ class IqiyiApi(
         const val USER_INFO_FIELDS =
             "userinfo,qiyi_vip_info,pps_vip_info,tv_vip_info,tv_tennis_vip,sport_vip,qiyi_tennis_vip"
         const val SITE_ORIGIN = "https://www.iqiyi.com"
+        const val VMS_URL = "https://cache.m.iqiyi.com/tmts"
+        const val VMS_KEY = "d5fb4bd9d50c4be6948c97edd7254b0e"
+        const val VMS_SRC = "76f90cbd92f94a2e925d83e8ccd22cb7"
+        val H265_VD = setOf(17, 18, 21)
         const val USER_AGENT =
             "Mozilla/5.0 (Linux; Android 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }

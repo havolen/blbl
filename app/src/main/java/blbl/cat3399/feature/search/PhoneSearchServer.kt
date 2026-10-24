@@ -20,6 +20,7 @@ import java.util.concurrent.Executors
 class PhoneSearchServer {
     enum class Engine(val wire: String) {
         BILI("bili"),
+        IQIYI("iqiyi"),
         MANGO("mango"),
     }
 
@@ -286,7 +287,7 @@ button:active{transform:scale(.98);opacity:.82}
 <main class="card">
   <header>
     <h1>手机搜索</h1>
-    <p>输入会实时同步到电视；可直接选择“搜 B 站”或“搜芒果”。</p>
+    <p>输入会实时同步到电视；可直接选择“搜哔哩哔哩”“搜爱奇艺”或“搜芒果”。</p>
   </header>
   <textarea id="q" maxlength="200" placeholder="输入要搜索的内容…" autofocus>__QUERY_HTML__</textarea>
   <section class="side">
@@ -296,7 +297,8 @@ button:active{transform:scale(.98);opacity:.82}
       <button class="secondary" id="clear" type="button">清空</button>
     </div>
     <div class="row">
-      <button class="primary" id="searchBili" type="button">搜 B 站</button>
+      <button class="primary" id="searchBili" type="button">搜哔哩哔哩</button>
+      <button class="primary iqiyi" id="searchIqiyi" type="button">搜爱奇艺</button>
       <button class="primary mango" id="searchMango" type="button">搜芒果</button>
     </div>
   </section>
@@ -357,6 +359,7 @@ function submit(engine){
     .catch(function(){ setStatus('发送失败，请检查电视连接'); });
 }
 document.getElementById('searchBili').addEventListener('click', function(){ submit('bili'); });
+document.getElementById('searchIqiyi').addEventListener('click', function(){ submit('iqiyi'); });
 document.getElementById('searchMango').addEventListener('click', function(){ submit('mango'); });
 q.focus();
 q.setSelectionRange(q.value.length, q.value.length);

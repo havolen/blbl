@@ -1649,7 +1649,7 @@ class LivePlayerActivity : BaseActivity() {
             resetBufferingOverlayState()
             AppLog.e("LivePlayer", "loadAndPlay failed", t)
             val e = t as? BiliApiException
-            val msg = e?.let { "B 站返回：${it.apiCode} / ${it.apiMessage}" } ?: (t.message ?: "未知错误")
+            val msg = e?.let { "哔哩哔哩返回：${it.apiCode} / ${it.apiMessage}" } ?: (t.message ?: "未知错误")
             AppToast.showLong(this, msg)
         }
     }

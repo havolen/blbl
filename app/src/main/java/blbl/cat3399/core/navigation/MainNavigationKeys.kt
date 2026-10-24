@@ -45,6 +45,8 @@ object MainNavigationKeys {
             POPULAR,
             CATEGORY,
             LIVE,
+            MY_HISTORY,
+            MY_FAVORITES,
             MY_WATCH_LATER,
         )
 

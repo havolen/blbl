@@ -122,14 +122,28 @@ class AppPrefs(context: Context) {
     var topNavigationVisibleKeys: List<String>
         get() {
             val saved = prefs.getStringSet(KEY_TOP_NAVIGATION_VISIBLE_KEYS, null)
-            // Migrate only the exact previous default; preserve other user selections.
-            val previousDefault = MainNavigationKeys.defaultVisible + setOf(MainNavigationKeys.MY_HISTORY, MainNavigationKeys.MY_FAVORITES)
-            val migrate = !prefs.getBoolean("top_nav_defaults_v4", false)
-            val selected = if (migrate && saved == previousDefault) MainNavigationKeys.defaultVisible
-                else saved?.toSet() ?: MainNavigationKeys.defaultVisible
+            // Migrate only exact old defaults; preserve every other user selection.
+            val legacyDefaultV4 =
+                setOf(
+                    MainNavigationKeys.SEARCH,
+                    MainNavigationKeys.RECOMMEND,
+                    MainNavigationKeys.POPULAR,
+                    MainNavigationKeys.CATEGORY,
+                    MainNavigationKeys.LIVE,
+                    MainNavigationKeys.MY_WATCH_LATER,
+                )
+            val legacyDefaultV3 = legacyDefaultV4 + setOf(MainNavigationKeys.MY_HISTORY, MainNavigationKeys.MY_FAVORITES)
+            val migrate = !prefs.getBoolean("top_nav_defaults_v5", false)
+            val selected = when {
+                saved == null -> MainNavigationKeys.defaultVisible
+                migrate && (saved == legacyDefaultV3 || saved == legacyDefaultV4) -> MainNavigationKeys.defaultVisible
+                else -> saved
+            }
             if (migrate) {
-                val editor = prefs.edit().putBoolean("top_nav_defaults_v4", true)
-                if (saved != null && saved != selected) editor.putStringSet(KEY_TOP_NAVIGATION_VISIBLE_KEYS, selected)
+                val editor = prefs.edit().putBoolean("top_nav_defaults_v5", true)
+                if (saved != null && saved != selected) {
+                    editor.putStringSet(KEY_TOP_NAVIGATION_VISIBLE_KEYS, selected)
+                }
                 editor.apply()
             }
             return MainNavigationKeys.all.filter { it in selected }
@@ -144,10 +158,10 @@ class AppPrefs(context: Context) {
     /** History data source selected inside the shared History page. */
     var historySource: String
         get() = prefs.getString(KEY_HISTORY_SOURCE, HISTORY_SOURCE_BILIBILI)
-            ?.takeIf { it == HISTORY_SOURCE_MANGO }
+            ?.takeIf { it in HISTORY_SOURCES }
             ?: HISTORY_SOURCE_BILIBILI
         set(value) {
-            if (value == HISTORY_SOURCE_BILIBILI || value == HISTORY_SOURCE_MANGO) {
+            if (value in HISTORY_SOURCES) {
                 prefs.edit().putString(KEY_HISTORY_SOURCE, value).apply()
             }
         }
@@ -1090,7 +1104,10 @@ class AppPrefs(context: Context) {
         const val MAIN_BACK_FOCUS_SCHEME_C = "C"
 
         const val HISTORY_SOURCE_BILIBILI = "bilibili"
+        const val HISTORY_SOURCE_IQIYI = "iqiyi"
         const val HISTORY_SOURCE_MANGO = "mango"
+        const val HISTORY_SOURCE_TENCENT = "tencent"
+        val HISTORY_SOURCES = setOf(HISTORY_SOURCE_BILIBILI, HISTORY_SOURCE_IQIYI, HISTORY_SOURCE_MANGO, HISTORY_SOURCE_TENCENT)
 
         const val VIDEO_CARD_LONG_PRESS_ACTION_MANUAL = "manual"
         const val VIDEO_CARD_LONG_PRESS_ACTION_WATCH_LATER = "watch_later"

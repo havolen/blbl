@@ -3604,7 +3604,7 @@ class PlayerActivity : BaseActivity() {
     }
 
     internal fun playUrlParamsForSession(): Pair<Int, Int> {
-        // Always request the highest; B 站会根据登录/会员权限返回实际可用清晰度。
+        // Always request the highest; 哔哩哔哩会根据登录/会员权限返回实际可用清晰度。
         val qn = 127
         var fnval = 4048 // all available DASH video
         fnval = fnval or 128 // 4K

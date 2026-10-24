@@ -36,7 +36,9 @@ class MyHistoryHostFragment : Fragment(), MyTabSwitchFocusTarget, MyTabContentSw
         val initialSource = BiliClient.prefs.historySource
         val tabs = b.historySourceTabs
         tabs.addTab(tabs.newTab().setText(R.string.history_source_bilibili), false)
+        tabs.addTab(tabs.newTab().setText(R.string.history_source_iqiyi), false)
         tabs.addTab(tabs.newTab().setText(R.string.history_source_mango), false)
+        tabs.addTab(tabs.newTab().setText(R.string.history_source_tencent), false)
         tabs.getTabAt(tabPositionFor(initialSource))?.select()
         tabs.addOnTabSelectedListener(
             object : TabLayout.OnTabSelectedListener {
@@ -106,7 +108,9 @@ class MyHistoryHostFragment : Fragment(), MyTabSwitchFocusTarget, MyTabContentSw
 
     private fun createFragment(source: String): Fragment =
         when (source) {
+            AppPrefs.HISTORY_SOURCE_IQIYI -> IqiyiHistoryFragment()
             AppPrefs.HISTORY_SOURCE_MANGO -> MangoHistoryFragment()
+            AppPrefs.HISTORY_SOURCE_TENCENT -> TencentHistoryFragment()
             else -> MyHistoryFragment()
         }
 
@@ -114,10 +118,20 @@ class MyHistoryHostFragment : Fragment(), MyTabSwitchFocusTarget, MyTabContentSw
         activeSource?.let { childFragmentManager.findFragmentByTag(tagFor(it)) as? T }
 
     private fun sourceForPosition(position: Int): String =
-        if (position == MANGO_TAB_POSITION) AppPrefs.HISTORY_SOURCE_MANGO else AppPrefs.HISTORY_SOURCE_BILIBILI
+        when (position) {
+            IQIYI_TAB_POSITION -> AppPrefs.HISTORY_SOURCE_IQIYI
+            MANGO_TAB_POSITION -> AppPrefs.HISTORY_SOURCE_MANGO
+            TENCENT_TAB_POSITION -> AppPrefs.HISTORY_SOURCE_TENCENT
+            else -> AppPrefs.HISTORY_SOURCE_BILIBILI
+        }
 
     private fun tabPositionFor(source: String): Int =
-        if (source == AppPrefs.HISTORY_SOURCE_MANGO) MANGO_TAB_POSITION else BILIBILI_TAB_POSITION
+        when (source) {
+            AppPrefs.HISTORY_SOURCE_IQIYI -> IQIYI_TAB_POSITION
+            AppPrefs.HISTORY_SOURCE_MANGO -> MANGO_TAB_POSITION
+            AppPrefs.HISTORY_SOURCE_TENCENT -> TENCENT_TAB_POSITION
+            else -> BILIBILI_TAB_POSITION
+        }
 
     private fun tagFor(source: String): String = "history-source:$source"
 
@@ -129,6 +143,8 @@ class MyHistoryHostFragment : Fragment(), MyTabSwitchFocusTarget, MyTabContentSw
 
     private companion object {
         const val BILIBILI_TAB_POSITION = 0
-        const val MANGO_TAB_POSITION = 1
+        const val IQIYI_TAB_POSITION = 1
+        const val MANGO_TAB_POSITION = 2
+        const val TENCENT_TAB_POSITION = 3
     }
 }

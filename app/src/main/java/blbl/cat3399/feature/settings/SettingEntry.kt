@@ -34,6 +34,7 @@ enum class SettingId(
     VideoCardLongPressAction("video_card_long_press_action"),
     FollowingListOrder("following_list_order"),
     TopNavigationItems("top_navigation_items"),
+    ResetTopNavigationItems("reset_top_navigation_items"),
     MainCategoryVisibleTabs("main_category_visible_tabs"),
     MainLiveVisibleTabs("main_live_visible_tabs"),
 

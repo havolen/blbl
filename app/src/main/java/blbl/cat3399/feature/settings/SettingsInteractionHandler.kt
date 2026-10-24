@@ -881,6 +881,12 @@ class SettingsInteractionHandler(
                 }
             }
 
+            SettingId.ResetTopNavigationItems -> {
+                prefs.topNavigationVisibleKeys = blbl.cat3399.core.navigation.MainNavigationKeys.defaultVisible.toList()
+                AppToast.show(activity, "已恢复默认侧边导航")
+                renderer.refreshSection(entry.id)
+            }
+
             SettingId.MainCategoryVisibleTabs -> {
                 showVisibleTabsDialog(
                     sectionIndex = state.currentSectionIndex,
