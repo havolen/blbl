@@ -15,8 +15,12 @@ internal class PlayerVolumeBoost(
 ) {
     private var enhancer: LoudnessEnhancer? = null
 
-    fun attach(audioSessionId: Int): Boolean {
+    fun attach(audioSessionId: Int, gainMb: Int = DEFAULT_GAIN_MB): Boolean {
         release()
+        if (gainMb <= 0) {
+            AppLog.i("VolumeBoost", "disabled session=$audioSessionId")
+            return false
+        }
         return runCatching {
             val effect = LoudnessEnhancer(audioSessionId)
             effect.setTargetGain(gainMb)

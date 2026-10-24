@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import blbl.cat3399.R
 import blbl.cat3399.core.account.MangoSessionStore
 import blbl.cat3399.core.log.AppLog
+import blbl.cat3399.core.net.BiliClient
 import blbl.cat3399.core.ui.AppToast
 import blbl.cat3399.core.ui.BaseActivity
 import blbl.cat3399.core.ui.Immersive
@@ -106,7 +107,7 @@ class MangoVideoActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMangoVideoBinding.inflate(layoutInflater.cloneInUserScale(this))
         setContentView(binding.root)
-        volumeBoost.attach(0)
+        volumeBoost.attach(0, BiliClient.prefs.playerVolumeBoostDb * 100)
         Immersive.apply(this, blbl.cat3399.core.net.BiliClient.prefs.fullscreenEnabled)
         installPlaybackProgressBar()
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)

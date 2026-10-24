@@ -271,7 +271,7 @@ class IqiyiPlayerActivity : BaseActivity() {
                 }
         val audioSessionId = (getSystemService(Context.AUDIO_SERVICE) as AudioManager).generateAudioSessionId()
         exo.setAudioSessionId(audioSessionId)
-        volumeBoost.attach(audioSessionId)
+        volumeBoost.attach(audioSessionId, BiliClient.prefs.playerVolumeBoostDb * 100)
         player = exo
         binding.playerView.player = exo
         binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT

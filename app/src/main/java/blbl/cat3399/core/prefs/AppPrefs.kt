@@ -588,6 +588,16 @@ class AppPrefs(context: Context) {
                     normalizePlayerShortSeekStepSeconds(value),
                 ).apply()
 
+    var playerVolumeBoostDb: Int
+        get() {
+            val v = prefs.getInt(KEY_PLAYER_VOLUME_BOOST_DB, PLAYER_VOLUME_BOOST_DEFAULT_DB)
+            return if (v in PLAYER_VOLUME_BOOST_OPTIONS) v else PLAYER_VOLUME_BOOST_DEFAULT_DB
+        }
+        set(value) {
+            val v = if (value in PLAYER_VOLUME_BOOST_OPTIONS) value else PLAYER_VOLUME_BOOST_DEFAULT_DB
+            prefs.edit().putInt(KEY_PLAYER_VOLUME_BOOST_DB, v).apply()
+        }
+
     var playerHoldSeekSpeed: Float
         get() {
             val v = prefs.getFloat(KEY_PLAYER_HOLD_SEEK_SPEED, PLAYER_HOLD_SEEK_SPEED_DEFAULT)
@@ -1246,6 +1256,7 @@ class AppPrefs(context: Context) {
         private const val KEY_PLAYER_TOUCH_GESTURES_ENABLED = "player_touch_gestures_enabled"
         private const val KEY_PLAYER_VIDEOSHOT_PREVIEW_SIZE = "player_videoshot_preview_size"
         private const val KEY_PLAYER_AUDIO_BALANCE_LEVEL = "player_audio_balance_level"
+        private const val KEY_PLAYER_VOLUME_BOOST_DB = "player_volume_boost_db"
         private const val KEY_PLAYER_PLAYBACK_MODE = "player_playback_mode"
         private const val KEY_PLAYER_SETTINGS_APPLY_TO_GLOBAL = "player_settings_apply_to_global"
         private const val KEY_PLAYER_UP_QUICK_CARD_ENABLED = "player_up_quick_card_enabled"
@@ -1356,6 +1367,9 @@ class AppPrefs(context: Context) {
 
         const val PLAYER_STYLE_FULLSCREEN = "fullscreen"
         const val PLAYER_STYLE_HD = "hd"
+
+        val PLAYER_VOLUME_BOOST_OPTIONS: Set<Int> = linkedSetOf(0, 3, 6, 9)
+        const val PLAYER_VOLUME_BOOST_DEFAULT_DB = 6
 
         const val PLAYER_AUDIO_BALANCE_OFF = "off"
         const val PLAYER_AUDIO_BALANCE_LOW = "low"

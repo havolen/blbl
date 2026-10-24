@@ -70,6 +70,7 @@ enum class SettingId(
     PlayerRenderView("player_render_view"),
     PlayerEngineKind("player_engine_kind"),
     PlayerAudioBalance("player_audio_balance"),
+    PlayerVolumeBoost("player_volume_boost"),
     PlayerOsdButtons("player_osd_buttons"),
     PlayerCustomShortcuts("player_custom_shortcuts"),
     PlayerDebugEnabled("player_debug_enabled"),

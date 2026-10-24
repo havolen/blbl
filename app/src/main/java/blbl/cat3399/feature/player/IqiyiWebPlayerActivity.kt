@@ -53,7 +53,7 @@ class IqiyiWebPlayerActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityIqiyiWebPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        volumeBoost.attach(0)
+        volumeBoost.attach(0, BiliClient.prefs.playerVolumeBoostDb * 100)
         Immersive.apply(this, BiliClient.prefs.fullscreenEnabled)
         window.decorView.keepScreenOn = true
 

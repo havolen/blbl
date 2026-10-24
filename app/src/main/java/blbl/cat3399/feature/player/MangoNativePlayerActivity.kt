@@ -89,7 +89,7 @@ class MangoNativePlayerActivity : Activity() {
     private var currentCatalog: MangoCatalog? = null
     private val catalogRepository = MangoCatalogRepository()
     private val catalogScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main)
-    private var danmakuEnabled = true
+    private var danmakuEnabled = false
     private var danmakuCount = 0
     private var danmakuCdnVersion = ""
     private var danmakuIntervalSec = 60
@@ -253,8 +253,13 @@ class MangoNativePlayerActivity : Activity() {
             onToggle = { enabled ->
                 danmakuEnabled = enabled
                 danmakuView.visibility = if (enabled) View.VISIBLE else View.GONE
-                AppLog.i("MangoExo", "danmaku toggle=$enabled")
+                if (enabled && danmakuCount == 0) {
+                    // Default is off; the first tap both enables the layer and starts loading.
+                    player?.let { loadDanmaku(it) }
+                }
+                AppLog.i("MangoExo", "danmaku toggle=$enabled count=$danmakuCount")
             }
+            setDanmakuOn(false, notify = false)
         }
         val progressRow = LinearLayout(uiContext).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -535,7 +540,14 @@ class MangoNativePlayerActivity : Activity() {
             }
             executor.shutdown()
             val items = ArrayList<Danmaku>()
-            futures.forEach { future -> runCatching { future.get() }.getOrNull()?.let(items::addAll) }
+            var chunksWithData = 0
+            futures.forEach { future ->
+                val chunk = runCatching { future.get() }.getOrNull()
+                if (!chunk.isNullOrEmpty()) {
+                    chunksWithData++
+                    items.addAll(chunk)
+                }
+            }
             val unique = items
                 .distinctBy { item -> item.dmid ?: ((item.timeMs.toLong() shl 20) xor item.text.hashCode().toLong()) }
                 .filter { it.timeMs.toLong() <= durationMs }
@@ -545,9 +557,9 @@ class MangoNativePlayerActivity : Activity() {
                 danmakuCount = unique.size
                 danmakuView.setDanmakus(unique)
                 if (unique.isEmpty()) {
-                    AppLog.w("MangoDanmaku", "loaded empty chunks=$chunkCount config=${config != null}")
+                    AppLog.w("MangoDanmaku", "loaded empty chunks=$chunkCount chunksWithData=0 config=${config != null}")
                 } else {
-                    AppLog.i("MangoDanmaku", "loaded count=${unique.size} chunks=$chunkCount config=${config != null}")
+                    AppLog.i("MangoDanmaku", "loaded count=${unique.size} chunks=$chunkCount chunksWithData=$chunksWithData config=${config != null}")
                 }
             }
         }
@@ -587,7 +599,7 @@ class MangoNativePlayerActivity : Activity() {
         player = ExoPlayer.Builder(this).setTrackSelector(trackSelector).build().also { exo ->
             val audioSessionId = (getSystemService(Context.AUDIO_SERVICE) as AudioManager).generateAudioSessionId()
             exo.setAudioSessionId(audioSessionId)
-            volumeBoost.attach(audioSessionId)
+            volumeBoost.attach(audioSessionId, BiliClient.prefs.playerVolumeBoostDb * 100)
             exo.addListener(
                 object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {

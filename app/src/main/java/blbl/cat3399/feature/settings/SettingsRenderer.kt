@@ -455,6 +455,12 @@ class SettingsRenderer(
                         AudioBalanceLevel.fromPrefValue(prefs.playerAudioBalanceLevel).label,
                         null,
                     ),
+                    SettingEntry(
+                        SettingId.PlayerVolumeBoost,
+                        "音量增强",
+                        prefs.playerVolumeBoostDb.let { if (it == 0) "关闭" else "+$it dB" },
+                        "提升爱奇艺/芒果播放音量；+6 dB 约为 2 倍振幅",
+                    ),
                     SettingEntry(SettingId.PlayerCdnPreference, "CDN线路", SettingsText.cdnText(prefs.playerCdnPreference), null),
                     SettingEntry(
                         SettingId.LiveHighBitrateEnabled,

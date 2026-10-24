@@ -1451,6 +1451,22 @@ class SettingsInteractionHandler(
                 }
             }
 
+            SettingId.PlayerVolumeBoost -> {
+                val options = blbl.cat3399.core.prefs.AppPrefs.PLAYER_VOLUME_BOOST_OPTIONS.toList()
+                val current = prefs.playerVolumeBoostDb
+                val checked = options.indexOf(current).takeIf { it >= 0 } ?: 0
+                showChoiceDialog(
+                    title = "音量增强",
+                    items = options.map { if (it == 0) "关闭" else "+$it dB" },
+                    checkedIndex = checked,
+                ) { selected ->
+                    val db = options.firstOrNull { (if (it == 0) "关闭" else "+$it dB") == selected } ?: 0
+                    prefs.playerVolumeBoostDb = db
+                    AppToast.show(activity, "音量增强：${if (db == 0) "关闭" else "+$db dB"}（下次播放生效）")
+                    renderer.refreshSection(entry.id)
+                }
+            }
+
             SettingId.PlayerOsdButtons -> showPlayerOsdButtonsDialog(sectionIndex = state.currentSectionIndex, focusId = entry.id)
 
             SettingId.PlayerCustomShortcuts -> showPlayerCustomShortcutsDialog(sectionIndex = state.currentSectionIndex, focusId = entry.id)

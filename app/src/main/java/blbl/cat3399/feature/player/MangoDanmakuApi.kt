@@ -47,7 +47,11 @@ internal object MangoDanmakuApi {
             }.distinct()
         }.orEmpty()
         val interval = data.optInt("interval", fallbackIntervalSec).coerceIn(MIN_INTERVAL_SEC, MAX_INTERVAL_SEC)
-        if (version == null && hosts.isEmpty()) return Config(null, interval, DEFAULT_CDN_HOSTS)
+        if (version == null && hosts.isEmpty()) {
+            AppLog.w("MangoDanmaku", "config empty version=${data.optString("cdn_version", "")}")
+            return Config(null, interval, DEFAULT_CDN_HOSTS)
+        }
+        AppLog.i("MangoDanmaku", "config version=$version hosts=${hosts.joinToString(",")} interval=$interval")
         return Config(version, interval, hosts.ifEmpty { DEFAULT_CDN_HOSTS })
     }
 
@@ -65,7 +69,12 @@ internal object MangoDanmakuApi {
         for (host in (hosts.ifEmpty { DEFAULT_CDN_HOSTS }).mapNotNull(::normalizeCdnHost).distinct()) {
             val url = "https://$host/$version/$index.json"
             val body = getBody(client, url, userAgent) ?: continue
-            parseItems(body, durationMs, intervalSec, index)?.let { return it }
+            val parsed = parseItems(body, durationMs, intervalSec, index)
+            if (parsed == null) {
+                AppLog.w("MangoDanmaku", "cdn parse failed host=$host index=$index")
+            } else {
+                return parsed
+            }
         }
         return null
     }
@@ -172,7 +181,13 @@ internal object MangoDanmakuApi {
             .header("Referer", "https://www.mgtv.com/")
             .build()
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) return@use null
+            if (!response.isSuccessful) {
+                AppLog.w(
+                    "MangoDanmaku",
+                    "http ${response.code} ${url.substringAfter("://").substringBefore('?')}",
+                )
+                return@use null
+            }
             response.body?.string()
         }
     }.onFailure { AppLog.w("MangoDanmaku", "request failed (${it.javaClass.simpleName})") }.getOrNull()
