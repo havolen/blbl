@@ -94,7 +94,6 @@ class IqiyiWebPlayerActivity : BaseActivity() {
                     if (desktopMode) {
                         applyDesktopLayout()
                         handler.postDelayed({ applyDesktopLayout() }, 1200L)
-                        handler.postDelayed({ applyDesktopLayout() }, 3000L)
                     } else {
                         view?.evaluateJavascript(AUTOPLAY_JS, null)
                         view?.evaluateJavascript(DANMAKU_SIZE_JS, null)
