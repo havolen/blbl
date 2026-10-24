@@ -12,6 +12,7 @@ import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebView
+import android.webkit.WebSettings
 import android.webkit.WebViewClient
 import blbl.cat3399.BuildConfig
 import blbl.cat3399.R
@@ -66,7 +67,13 @@ class WebQrLoginActivity : BaseActivity() {
         store = WebSiteSessionStore(applicationContext, site)
         binding.tvTitle.text = "${site.title}扫码登录"
         binding.tvStatus.text = "正在加载${site.title}登录页…"
-        binding.tvHint.text = "登录成功后会自动返回；若二维码过期，请按“刷新二维码”。"
+        val chromeVersion = chromeMajorVersion()
+        binding.tvHint.text =
+            if (site == WebLoginSite.DOUYIN && chromeVersion in 1..79) {
+                "当前设备 WebView $chromeVersion，抖音登录页需要 80+；若页面空白，请更新 WebView 或换设备。"
+            } else {
+                "登录成功后会自动返回；若二维码过期，请按“刷新二维码”。"
+            }
         binding.btnBack.setOnClickListener { finish() }
         binding.btnRefresh.setOnClickListener { reload() }
         binding.btnRefresh.requestFocus()
@@ -113,12 +120,19 @@ class WebQrLoginActivity : BaseActivity() {
         handler.postDelayed({ reportBlankPageIfNeeded() }, BLANK_PAGE_CHECK_DELAY_MS)
     }
 
+    private fun chromeMajorVersion(): Int {
+        val ua = runCatching { WebSettings.getDefaultUserAgent(this) }.getOrNull().orEmpty()
+        return Regex("Chrome/(\\d+)").find(ua)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 0
+    }
+
     private fun reportBlankPageIfNeeded() {
         if (completed || !pageFinished) return
         binding.webView.evaluateJavascript("(document.body ? document.body.innerText.length : 0)") { value ->
             val length = value?.trim()?.toIntOrNull() ?: 0
             if (!completed && length < 10) {
-                binding.tvStatus.text = "页面未能渲染，可能是设备 WebView 版本过低（当前 66），请更新 WebView 或换设备重试"
+                val chromeVersion = chromeMajorVersion()
+                binding.tvStatus.text =
+                    "页面未能渲染，可能是设备 WebView 版本过低（当前 $chromeVersion），请更新 WebView 或换设备重试"
             }
         }
     }
