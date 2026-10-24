@@ -12,6 +12,7 @@ import blbl.cat3399.core.ui.requestFocusAdapterPositionReliable
 import blbl.cat3399.databinding.ActivitySettingsBinding
 import blbl.cat3399.feature.player.AudioBalanceLevel
 import blbl.cat3399.feature.player.engine.IjkPlayerPlugin
+import blbl.cat3399.ui.MainRootNavRegistry
 
 class SettingsRenderer(
     private val activity: SettingsActivity,
@@ -237,7 +238,12 @@ class SettingsRenderer(
             "页面设置" ->
                 listOf(
                     SettingEntry(SettingId.StartupPage, "启动默认页", SettingsText.startupPageText(activity, prefs.startupPage), null),
-                    SettingEntry(SettingId.TopNavigationItems, "侧边导航显示项", "${prefs.topNavigationVisibleKeys.size}/13 项显示", null),
+                    SettingEntry(
+                        SettingId.TopNavigationItems,
+                        "侧边导航显示项",
+                        "${prefs.topNavigationVisibleKeys.size}/${MainRootNavRegistry.allTopNavItems(activity).size} 项显示",
+                        null,
+                    ),
                     SettingEntry(SettingId.ResetTopNavigationItems, "恢复默认侧边导航", "恢复收藏、历史等默认入口", null),
                     SettingEntry(SettingId.GridSpanCount, "每行卡片数量", SettingsText.gridSpanText(prefs.gridSpanCount), null),
                     SettingEntry(

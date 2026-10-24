@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/blblPageBackdrop"
+    android:clipChildren="false"
+    android:paddingStart="20dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="16dp">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_categories"
+        android:layout_width="252dp"
+        android:layout_height="0dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:paddingVertical="2dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/panel_content"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="20dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/recycler_categories"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tv_category_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:includeFontPadding="false"
+            android:textColor="?attr/blblOnPageBackdrop"
+            android:textSize="30sp"
+            tools:text="动漫" />
+
+        <TextView
+            android:id="@+id/tv_category_alias"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:includeFontPadding="false"
+            android:textColor="?attr/blblOnPageBackdropSecondary"
+            android:textSize="13sp"
+            tools:text="动漫 / 动画 / 番剧" />
+
+        <TextView
+            android:id="@+id/tv_coverage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:includeFontPadding="false"
+            android:textColor="?attr/blblOnPageBackdropSecondary"
+            android:textSize="12sp"
+            tools:text="覆盖 6 个站点 · 已接入 3 个" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:includeFontPadding="false"
+            android:text="站点导航"
+            android:textColor="?attr/blblOnPageBackdropSecondary"
+            android:textSize="12sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_sites"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:overScrollMode="never" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_site_detail"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/blblFocusStrokeColor"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingHorizontal="22dp"
+                android:paddingVertical="14dp">
+
+                <TextView
+                    android:id="@+id/tv_site_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:includeFontPadding="false"
+                    android:textColor="?attr/blblOnPageBackdrop"
+                    android:textSize="22sp"
+                    tools:text="哔哩哔哩" />
+
+                <TextView
+                    android:id="@+id/tv_site_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:includeFontPadding="false"
+                    android:textColor="?attr/blblOnPageBackdropSecondary"
+                    android:textSize="14sp"
+                    tools:text="已接入 · 按 OK 打开该分类" />
+
+                <TextView
+                    android:id="@+id/tv_site_hint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:lineSpacingExtra="2dp"
+                    android:textColor="?attr/blblOnPageBackdropSecondary"
+                    android:textSize="13sp"
+                    tools:text="该分类下还覆盖：爱奇艺、芒果 TV、优酷、腾讯视频、抖音" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/tv_catalog_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:includeFontPadding="false"
+            android:textColor="?attr/blblOnPageBackdropSecondary"
+            android:textSize="12sp"
+            tools:text="未接入的站点已保留切换键，接入后即可直接打开。" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

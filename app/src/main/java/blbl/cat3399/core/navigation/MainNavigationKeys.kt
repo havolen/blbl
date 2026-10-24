@@ -8,6 +8,7 @@ object MainNavigationKeys {
     const val RECOMMEND = "recommend"
     const val POPULAR = "popular"
     const val CATEGORY = "category"
+    const val CATALOG = "catalog"
     const val CINEMA = "cinema"
     const val BANGUMI = "bangumi"
     const val LIVE = "live"
@@ -24,6 +25,7 @@ object MainNavigationKeys {
             RECOMMEND,
             POPULAR,
             CATEGORY,
+            CATALOG,
             CINEMA,
             BANGUMI,
             LIVE,
@@ -44,6 +46,7 @@ object MainNavigationKeys {
             RECOMMEND,
             POPULAR,
             CATEGORY,
+            CATALOG,
             LIVE,
             MY_HISTORY,
             MY_FAVORITES,

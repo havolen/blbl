@@ -87,6 +87,21 @@ class SearchFragment : Fragment(), BackPressHandler, RefreshKeyHandler {
         // SearchState is authoritative, so refresh both the input and QR panel once more.
         binding.tvQuery.post { interactor?.renderInputPanelFromState() }
         preparePhoneSearchPanel()
+        consumePendingSearch()
+    }
+
+    /** Run a search requested from another page (for example the cross-site category catalog). */
+    internal fun consumePendingSearch() {
+        val keyword = (activity as? MainNavigationHost)?.consumePendingBilibiliSearch() ?: return
+        startSearch(keyword)
+    }
+
+    private fun startSearch(keyword: String) {
+        val query = keyword.trim()
+        if (query.isEmpty()) return
+        val interactor = interactor ?: return
+        interactor.setQuery(query)
+        interactor.performSearch()
     }
 
     override fun onHiddenChanged(hidden: Boolean) {

@@ -146,7 +146,17 @@ class AppPrefs(context: Context) {
                 }
                 editor.apply()
             }
-            return MainNavigationKeys.all.filter { it in selected }
+            // The catalog entry was added after the previous default snapshot. Add it once for
+            // existing installs, then respect whatever the user toggles afterwards.
+            val catalogAdded = prefs.getBoolean(KEY_TOP_NAV_CATALOG_ADDED, false)
+            val resolved =
+                if (!catalogAdded) {
+                    prefs.edit().putBoolean(KEY_TOP_NAV_CATALOG_ADDED, true).apply()
+                    if (saved == null) selected else selected + MainNavigationKeys.CATALOG
+                } else {
+                    selected
+                }
+            return MainNavigationKeys.all.filter { it in resolved }
                 .ifEmpty { MainNavigationKeys.all.filter { it in MainNavigationKeys.defaultVisible } }
         }
         set(value) {
@@ -1139,6 +1149,7 @@ class AppPrefs(context: Context) {
         private const val KEY_MAIN_LIVE_VISIBLE_TABS = "main_live_visible_tabs"
         private const val KEY_MAIN_MY_VISIBLE_TABS = "main_my_visible_tabs"
         private const val KEY_TOP_NAVIGATION_VISIBLE_KEYS = "top_navigation_visible_keys"
+        private const val KEY_TOP_NAV_CATALOG_ADDED = "top_nav_catalog_added_v6"
         private const val KEY_HISTORY_SOURCE = "my_history_source"
         private const val KEY_FOLLOWING_LIST_ORDER = "following_list_order"
         private const val KEY_DYNAMIC_FOLLOWING_RECENT_UPDATE_DOT_ENABLED = "dynamic_following_recent_update_dot_enabled"

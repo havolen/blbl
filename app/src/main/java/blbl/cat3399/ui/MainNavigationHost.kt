@@ -21,6 +21,12 @@ interface MainNavigationHost {
     /** Move focus to the previous or next visible top-level navigation entry. */
     fun requestFocusTopNavigationAdjacent(direction: Int): Boolean
 
+    /** Open the built-in Bilibili search page with [query] already submitted. */
+    fun openBilibiliSearch(query: String): Boolean = false
+
+    /** Consume a pending Bilibili search request when the search page becomes visible. */
+    fun consumePendingBilibiliSearch(): String? = null
+
     /** Page-local section tabs were shown or hidden; realign the collapsed navigation capsule. */
     fun onSectionTabVisibilityChanged() {}
 }

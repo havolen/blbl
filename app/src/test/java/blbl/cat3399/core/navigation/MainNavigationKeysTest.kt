@@ -19,6 +19,7 @@ class MainNavigationKeysTest {
                 keys.RECOMMEND,
                 keys.POPULAR,
                 keys.CATEGORY,
+                keys.CATALOG,
                 keys.LIVE,
                 keys.MY_HISTORY,
                 keys.MY_FAVORITES,

@@ -56,6 +56,7 @@ import blbl.cat3399.feature.settings.SettingsActivity
 import blbl.cat3399.feature.login.QrLoginActivity
 import blbl.cat3399.feature.player.engine.IjkPlayerPlugin
 import blbl.cat3399.feature.player.engine.IjkPlayerPluginUi
+import blbl.cat3399.feature.search.SearchFragment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -121,6 +122,7 @@ class MainActivity : BaseActivity(), MainNavigationHost {
     private var restoreAccountFocusAfterQrLogin: Boolean = false
     private var lastBackAtMs: Long = 0L
     private var lastMainFocusAtMs: Long = 0L
+    private var pendingBiliSearchQuery: String? = null
 
     private data class FocusabilitySnapshot(
         val descendantFocusability: Int,
@@ -526,6 +528,7 @@ class MainActivity : BaseActivity(), MainNavigationHost {
                 MainRootNavIds.HOME -> (root as? blbl.cat3399.feature.home.HomeFragment)?.currentPageKey ?: currentTopNavKey
                 MainRootNavIds.ACCOUNT -> MainNavigationKeys.MY_ACCOUNT
                 MainRootNavIds.CATEGORY -> MainTopNavAdapter.KEY_CATEGORY
+                MainRootNavIds.CATALOG -> MainTopNavAdapter.KEY_CATALOG
                 MainRootNavIds.LIVE -> MainTopNavAdapter.KEY_LIVE
                 MainRootNavIds.SEARCH -> MainTopNavAdapter.KEY_SEARCH
                 MainRootNavIds.MY -> currentTopNavKey.takeIf { MainRootNavRegistry.myPageKeyForTopKey(it) != null }
@@ -1593,6 +1596,32 @@ class MainActivity : BaseActivity(), MainNavigationHost {
         if (index < 0) return requestFocusTopNavigationSelected()
         val target = (index + if (direction < 0) -1 else 1).coerceIn(sequence.indices)
         return focusTopNavigationSequenceIndex(sequence, target)
+    }
+
+    override fun openBilibiliSearch(query: String): Boolean {
+        val keyword = query.trim()
+        if (keyword.isEmpty()) return false
+        pendingBiliSearchQuery = keyword
+        if (!navigateTopKey(MainTopNavAdapter.KEY_SEARCH, refreshIfReselected = false)) {
+            pendingBiliSearchQuery = null
+            return false
+        }
+        binding.mainContainer.post { deliverPendingBiliSearch() }
+        return true
+    }
+
+    override fun consumePendingBilibiliSearch(): String? {
+        val keyword = pendingBiliSearchQuery ?: return null
+        pendingBiliSearchQuery = null
+        return keyword
+    }
+
+    private fun deliverPendingBiliSearch() {
+        if (pendingBiliSearchQuery == null) return
+        val fragment = currentRootFragment()
+        if (fragment is SearchFragment && fragment.isAdded && !fragment.isHidden) {
+            fragment.consumePendingSearch()
+        }
     }
 
     private fun focusMainFromTopNavigation(): Boolean {

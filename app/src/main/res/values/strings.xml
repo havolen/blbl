@@ -9,6 +9,7 @@
     <string name="tab_popular">热门</string>
     <string name="tab_search">搜索</string>
     <string name="tab_category">分类</string>
+    <string name="tab_catalog">影视分类</string>
     <string name="tab_dynamic">动态</string>
     <string name="tab_live">直播</string>
     <string name="tab_custom">自定义</string>

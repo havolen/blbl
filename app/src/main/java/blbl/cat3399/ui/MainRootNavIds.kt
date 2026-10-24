@@ -10,4 +10,5 @@ object MainRootNavIds {
     const val MY = 5
     const val CUSTOM = 6
     const val ACCOUNT = 7
+    const val CATALOG = 8
 }

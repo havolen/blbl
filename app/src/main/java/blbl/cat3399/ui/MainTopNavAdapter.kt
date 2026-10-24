@@ -165,6 +165,7 @@ class MainTopNavAdapter(
         const val KEY_RECOMMEND = MainNavigationKeys.RECOMMEND
         const val KEY_POPULAR = MainNavigationKeys.POPULAR
         const val KEY_CATEGORY = MainNavigationKeys.CATEGORY
+        const val KEY_CATALOG = MainNavigationKeys.CATALOG
         const val KEY_CINEMA = MainNavigationKeys.CINEMA
         const val KEY_BANGUMI = MainNavigationKeys.BANGUMI
         const val KEY_LIVE = MainNavigationKeys.LIVE

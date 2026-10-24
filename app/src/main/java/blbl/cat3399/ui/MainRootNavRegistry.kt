@@ -9,6 +9,7 @@ import blbl.cat3399.core.prefs.AppPrefs
 import blbl.cat3399.core.navigation.MainNavigationKeys
 import blbl.cat3399.core.net.BiliClient
 import blbl.cat3399.feature.category.CategoryFragment
+import blbl.cat3399.feature.catalog.CatalogFragment
 import blbl.cat3399.feature.custom.CustomPageFragment
 import blbl.cat3399.feature.custom.CustomPageTabRegistry
 import blbl.cat3399.feature.dynamic.DynamicFragment
@@ -84,8 +85,15 @@ object MainRootNavRegistry {
                 fragmentFactory = { CategoryFragment.newInstance() },
             ),
             RootNavSpec(
-                navId = MainRootNavIds.DYNAMIC,
-                key = "dynamic",
+                navId = MainRootNavIds.CATALOG,
+                key = MainNavigationKeys.CATALOG,
+                titleRes = R.string.tab_catalog,
+                iconRes = R.drawable.ic_nav_catalog,
+                matchesFragment = { it is CatalogFragment },
+                fragmentFactory = { CatalogFragment.newInstance() },
+            ),
+            RootNavSpec(
+                navId = MainRootNavIds.DYNAMIC,                key = "dynamic",
                 titleRes = R.string.tab_dynamic,
                 iconRes = R.drawable.ic_nav_dynamic,
                 startupPageKey = AppPrefs.STARTUP_PAGE_DYNAMIC,
@@ -133,6 +141,7 @@ object MainRootNavRegistry {
             MainTopNavSpec(MainNavigationKeys.RECOMMEND, R.string.tab_recommend, R.drawable.ic_nav_home),
             MainTopNavSpec(MainNavigationKeys.POPULAR, R.string.tab_popular, R.drawable.ic_hot_fire),
             MainTopNavSpec(MainNavigationKeys.CATEGORY, R.string.tab_category, R.drawable.ic_nav_category),
+            MainTopNavSpec(MainNavigationKeys.CATALOG, R.string.tab_catalog, R.drawable.ic_nav_catalog),
             MainTopNavSpec(MainNavigationKeys.CINEMA, R.string.tab_cinema, R.drawable.ic_nav_cinema),
             MainTopNavSpec(MainNavigationKeys.BANGUMI, R.string.tab_bangumi, R.drawable.ic_nav_bangumi),
             MainTopNavSpec(MainNavigationKeys.LIVE, R.string.tab_live, R.drawable.ic_nav_live),
@@ -179,6 +188,7 @@ object MainRootNavRegistry {
             -> MainRootNavIds.HOME
 
             MainTopNavAdapter.KEY_CATEGORY -> MainRootNavIds.CATEGORY
+            MainTopNavAdapter.KEY_CATALOG -> MainRootNavIds.CATALOG
             MainTopNavAdapter.KEY_LIVE -> MainRootNavIds.LIVE
             MainTopNavAdapter.KEY_MY_HISTORY,
             MainTopNavAdapter.KEY_MY_FAVORITES,
@@ -216,6 +226,7 @@ object MainRootNavRegistry {
             MainRootNavIds.SEARCH -> MainTopNavAdapter.KEY_SEARCH
             MainRootNavIds.HOME -> homePageKey?.takeIf(::isValidTopNavKey) ?: MainTopNavAdapter.KEY_RECOMMEND
             MainRootNavIds.CATEGORY -> MainTopNavAdapter.KEY_CATEGORY
+            MainRootNavIds.CATALOG -> MainTopNavAdapter.KEY_CATALOG
             MainRootNavIds.LIVE -> MainTopNavAdapter.KEY_LIVE
             MainRootNavIds.MY -> homePageKey?.takeIf { it in MainNavigationKeys.all && it.startsWith("my_") }
                 ?: MainTopNavAdapter.KEY_MY_HISTORY
@@ -228,6 +239,7 @@ object MainRootNavRegistry {
             MainRootNavIds.SEARCH,
             MainRootNavIds.HOME,
             MainRootNavIds.CATEGORY,
+            MainRootNavIds.CATALOG,
             MainRootNavIds.LIVE,
             MainRootNavIds.MY,
         ) && enabledSpecForNavId(navId) != null
