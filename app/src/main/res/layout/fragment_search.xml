@@ -42,6 +42,7 @@
                     android:includeFontPadding="false"
                     android:inputType="text"
                     android:maxLines="1"
+                    android:saveEnabled="false"
                     android:paddingStart="44dp"
                     android:paddingEnd="12dp"
                     android:paddingVertical="2dp"
