@@ -243,8 +243,6 @@ object SettingsText {
                 if (enabled.contains(blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_PREV)) add("上一个")
                 if (enabled.contains(blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_PLAY_PAUSE)) add("播放/暂停")
                 if (enabled.contains(blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_NEXT)) add("下一个")
-                if (enabled.contains(blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_REPLAY_10)) add("后退 10 秒")
-                if (enabled.contains(blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_FORWARD_10)) add("前进 10 秒")
                 if (enabled.contains(blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_SUBTITLE)) add("字幕")
                 if (enabled.contains(blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_DANMAKU)) add("弹幕")
                 if (enabled.contains(blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_DETAIL)) add("视频详情页")

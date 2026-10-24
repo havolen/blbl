@@ -16,6 +16,7 @@ import androidx.media3.common.Player
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
 import blbl.cat3399.R
 import blbl.cat3399.core.account.IqiyiSessionStore
@@ -118,8 +119,15 @@ class IqiyiPlayerActivity : BaseActivity() {
                     ),
                 )
 
+        // Select embedded text tracks even when the language is undetermined; some iQiyi
+        // streams expose subtitles only as an "und" track.
+        val trackSelector =
+            DefaultTrackSelector(this).apply {
+                setParameters(buildUponParameters().setSelectUndeterminedTextLanguage(true))
+            }
         val exo =
             ExoPlayer.Builder(this)
+                .setTrackSelector(trackSelector)
                 .build()
                 .apply {
                     addListener(

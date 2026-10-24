@@ -1390,8 +1390,6 @@ class AppPrefs(context: Context) {
         const val PLAYER_OSD_BTN_PREV = "prev"
         const val PLAYER_OSD_BTN_PLAY_PAUSE = "play_pause"
         const val PLAYER_OSD_BTN_NEXT = "next"
-        const val PLAYER_OSD_BTN_REPLAY_10 = "replay_10"
-        const val PLAYER_OSD_BTN_FORWARD_10 = "forward_10"
         const val PLAYER_OSD_BTN_SUBTITLE = "subtitle"
         const val PLAYER_OSD_BTN_DANMAKU = "danmaku"
         const val PLAYER_OSD_BTN_DETAIL = "detail"
@@ -1410,8 +1408,6 @@ class AppPrefs(context: Context) {
                 PLAYER_OSD_BTN_NEXT,
                 PLAYER_OSD_BTN_LIST_PANEL,
                 PLAYER_OSD_BTN_DANMAKU,
-                PLAYER_OSD_BTN_REPLAY_10,
-                PLAYER_OSD_BTN_FORWARD_10,
                 PLAYER_OSD_BTN_SUBTITLE,
                 PLAYER_OSD_BTN_DETAIL,
                 PLAYER_OSD_BTN_SPONSOR_SUBMIT,
@@ -1425,8 +1421,6 @@ class AppPrefs(context: Context) {
                 PLAYER_OSD_BTN_PREV,
                 PLAYER_OSD_BTN_PLAY_PAUSE,
                 PLAYER_OSD_BTN_NEXT,
-                PLAYER_OSD_BTN_REPLAY_10,
-                PLAYER_OSD_BTN_FORWARD_10,
                 PLAYER_OSD_BTN_SUBTITLE,
                 PLAYER_OSD_BTN_DANMAKU,
                 PLAYER_OSD_BTN_DETAIL,

@@ -1699,8 +1699,6 @@ class SettingsInteractionHandler(
                 blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_PREV to "上一个",
                 blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_PLAY_PAUSE to "播放/暂停",
                 blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_NEXT to "下一个",
-                blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_REPLAY_10 to "后退 10 秒",
-                blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_FORWARD_10 to "前进 10 秒",
                 blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_SUBTITLE to "字幕",
                 blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_DANMAKU to "弹幕",
                 blbl.cat3399.core.prefs.AppPrefs.PLAYER_OSD_BTN_DETAIL to "视频详情页",

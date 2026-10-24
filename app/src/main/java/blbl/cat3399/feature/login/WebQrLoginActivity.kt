@@ -23,12 +23,14 @@ import blbl.cat3399.core.ui.BaseActivity
 import blbl.cat3399.core.ui.Immersive
 import blbl.cat3399.core.ui.cloneInUserScale
 import blbl.cat3399.databinding.ActivityWebQrLoginBinding
+import org.json.JSONObject
 
 /**
  * QR login for sites that only expose a Web login page.
  *
- * The page is rendered with a desktop UA (mobile pages hide the QR entry for some sites), and the
- * session cookie is mirrored into OkHttp as soon as the page sets it.
+ * The official login page is rendered with a desktop UA (mobile pages hide the QR entry for some
+ * sites), the QR view is opened automatically, and the session cookie is mirrored into OkHttp as
+ * soon as the page sets it.
  */
 class WebQrLoginActivity : BaseActivity() {
     private lateinit var binding: ActivityWebQrLoginBinding
@@ -37,21 +39,15 @@ class WebQrLoginActivity : BaseActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var completed = false
     private var pageFinished = false
+    private var secondaryLoaded = false
 
     private val cookiePoll =
         object : Runnable {
             override fun run() {
                 if (completed) return
+                if (advanceSecondaryFlow()) return
                 if (checkLogin()) return
                 handler.postDelayed(this, COOKIE_POLL_INTERVAL_MS)
-            }
-        }
-
-    private val qrTabClick =
-        object : Runnable {
-            override fun run() {
-                if (completed || !pageFinished) return
-                binding.webView.evaluateJavascript(QR_TAB_JS, null)
             }
         }
 
@@ -72,16 +68,7 @@ class WebQrLoginActivity : BaseActivity() {
         binding.tvStatus.text = "正在加载${site.title}登录页…"
         binding.tvHint.text = "登录成功后会自动返回；若二维码过期，请按“刷新二维码”。"
         binding.btnBack.setOnClickListener { finish() }
-        binding.btnRefresh.setOnClickListener {
-            completed = false
-            pageFinished = false
-            binding.progress.visibility = View.VISIBLE
-            binding.tvStatus.text = "正在刷新二维码…"
-            binding.webView.reload()
-            scheduleQrTabClicks()
-            handler.removeCallbacks(cookiePoll)
-            handler.postDelayed(cookiePoll, COOKIE_POLL_INTERVAL_MS)
-        }
+        binding.btnRefresh.setOnClickListener { reload() }
         binding.btnRefresh.requestFocus()
 
         val cookieManager = CookieManager.getInstance()
@@ -116,7 +103,7 @@ class WebQrLoginActivity : BaseActivity() {
                     pageFinished = true
                     binding.tvStatus.text = "请使用${site.title}手机 App 扫描二维码"
                     AppLog.d("WebQrLogin", "page finished host=${url?.substringBefore('?')?.take(48)}")
-                    scheduleQrTabClicks()
+                    scheduleQrTriggers()
                     handler.removeCallbacks(cookiePoll)
                     handler.postDelayed(cookiePoll, COOKIE_POLL_INTERVAL_MS)
                 }
@@ -125,12 +112,105 @@ class WebQrLoginActivity : BaseActivity() {
         handler.postDelayed(cookiePoll, COOKIE_POLL_INTERVAL_MS)
     }
 
-    private fun scheduleQrTabClicks() {
-        if (site.qrTabSelector == null) return
-        handler.removeCallbacks(qrTabClick)
-        listOf(600L, 1_600L, 3_200L, 5_000L).forEach { delay ->
-            handler.postDelayed({ if (!completed) binding.webView.evaluateJavascript(QR_TAB_JS, null) }, delay)
+    private fun reload() {
+        completed = false
+        pageFinished = false
+        secondaryLoaded = false
+        binding.progress.visibility = View.VISIBLE
+        binding.tvStatus.text = "正在刷新二维码…"
+        binding.webView.reload()
+        handler.removeCallbacks(cookiePoll)
+        handler.postDelayed(cookiePoll, COOKIE_POLL_INTERVAL_MS)
+    }
+
+    private fun scheduleQrTriggers() {
+        if (site.qrTriggerSelector == null && site.qrTriggerText == null) return
+        // Host pages render their QR entry asynchronously; retry a few times.
+        listOf(500L, 1_500L, 3_000L, 5_000L, 8_000L).forEach { delay ->
+            handler.postDelayed(
+                {
+                    if (completed || !pageFinished) return@postDelayed
+                    binding.webView.evaluateJavascript(triggerJs(), null)
+                },
+                delay,
+            )
         }
+    }
+
+    private fun triggerJs(): String {
+        val selector = JSONObject.quote(site.qrTriggerSelector.orEmpty())
+        val text = JSONObject.quote(site.qrTriggerText.orEmpty())
+        return """
+            (function() {
+              if (window.__blblQrTriggered) return 'done';
+              function fire(el) {
+                ['mousedown', 'mouseup', 'click'].forEach(function(type) {
+                  el.dispatchEvent(new MouseEvent(type, {bubbles: true, cancelable: true, view: window}));
+                });
+              }
+              var selector = $selector;
+              var text = $text;
+              var el = selector ? document.querySelector(selector) : null;
+              if (!el && text) {
+                var nodes = document.querySelectorAll('a,button,div,span,i');
+                for (var i = 0; i < nodes.length; i++) {
+                  var node = nodes[i];
+                  if (node.offsetParent === null) continue;
+                  var value = (node.textContent || '').trim();
+                  if (value === text && node.children.length <= 2) {
+                    el = node;
+                    break;
+                  }
+                }
+              }
+              if (!el) return 'none';
+              fire(el);
+              window.__blblQrTriggered = true;
+              return 'clicked';
+            })();
+        """
+    }
+
+    /** QQ login first sets graph.qq.com cookies; reopen the OAuth page to finish the v.qq.com login. */
+    private fun advanceSecondaryFlow(): Boolean {
+        val secondary = site.secondaryUrl ?: return false
+        val cookieName = site.secondaryCookie ?: return false
+        if (secondaryLoaded) return false
+        val manager = CookieManager.getInstance()
+        val probe = manager.getCookie("https://graph.qq.com/")?.takeIf { it.isNotBlank() } ?: return false
+        if (!Regex("(?:^|;\\s*)$cookieName=").containsMatchIn(probe)) return false
+        secondaryLoaded = true
+        binding.tvStatus.text = "正在完成${site.title}授权…"
+        binding.webView.loadUrl(secondary)
+        listOf(1_200L, 2_500L, 4_000L, 6_000L).forEach { delay ->
+            handler.postDelayed({ if (!completed) binding.webView.evaluateJavascript(confirmJs(), null) }, delay)
+        }
+        return true
+    }
+
+    private fun confirmJs(): String {
+        val text = JSONObject.quote(site.secondaryConfirmText ?: "授权")
+        return """
+            (function() {
+              function fire(el) {
+                ['mousedown', 'mouseup', 'click'].forEach(function(type) {
+                  el.dispatchEvent(new MouseEvent(type, {bubbles: true, cancelable: true, view: window}));
+                });
+              }
+              var wanted = $text;
+              var nodes = document.querySelectorAll('a,button,div,span,i');
+              for (var i = 0; i < nodes.length; i++) {
+                var node = nodes[i];
+                if (node.offsetParent === null) continue;
+                var value = (node.textContent || '').trim();
+                if (value === wanted || value === '同意' || value === '授权并登录') {
+                  fire(node);
+                  return 'confirmed';
+                }
+              }
+              return 'none';
+            })();
+        """
     }
 
     private fun checkLogin(): Boolean {
@@ -176,7 +256,6 @@ class WebQrLoginActivity : BaseActivity() {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         binding.webView.stopLoading()
-        binding.webView.loadUrl("about:blank")
         binding.webView.destroy()
         super.onDestroy()
     }
@@ -191,41 +270,6 @@ class WebQrLoginActivity : BaseActivity() {
         private const val MOBILE_UA =
             "Mozilla/5.0 (Linux; Android 9) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-
-        private const val QR_TAB_JS = """
-            (function() {
-              var clicked = function(el) {
-                if (!el) return false;
-                var target = el.closest('a,button,div,span,i') || el;
-                target.click();
-                return true;
-              };
-              if (clicked(document.querySelector('#YT-qrbtn'))) return 'clicked-id';
-              var doc = document;
-              try {
-                var frames = document.querySelectorAll('iframe');
-                for (var i = 0; i < frames.length; i++) {
-                  var inner = frames[i].contentDocument;
-                  if (!inner) continue;
-                  var nodes = inner.querySelectorAll('body *');
-                  for (var j = 0; j < nodes.length; j++) {
-                    var t = (nodes[j].textContent || '').trim();
-                    if ((t === '扫码登录更安全' || t === '扫码登录') && nodes[j].children.length === 0) {
-                      if (clicked(nodes[j])) return 'clicked-iframe';
-                    }
-                  }
-                }
-              } catch (e) {}
-              var all = doc.querySelectorAll('body *');
-              for (var k = 0; k < all.length; k++) {
-                var text = (all[k].textContent || '').trim();
-                if ((text === '扫码登录更安全' || text === '扫码登录') && all[k].children.length === 0) {
-                  if (clicked(all[k])) return 'clicked-text';
-                }
-              }
-              return 'none';
-            })();
-        """
 
         fun intent(context: Context, site: WebLoginSite): Intent =
             Intent(context, WebQrLoginActivity::class.java)
