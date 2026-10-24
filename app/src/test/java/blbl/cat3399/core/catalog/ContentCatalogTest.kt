@@ -54,7 +54,7 @@ class ContentCatalogTest {
             ContentCategory.MUSIC.sites,
         )
         assertEquals(
-            setOf(StreamingSite.IQIYI, StreamingSite.BILIBILI, StreamingSite.TENCENT),
+            setOf(StreamingSite.BILIBILI, StreamingSite.MANGO, StreamingSite.TENCENT),
             ContentCategory.PODCAST.sites,
         )
         assertEquals(
@@ -63,7 +63,7 @@ class ContentCatalogTest {
         )
         listOf(ContentCategory.LIFE, ContentCategory.CAR, ContentCategory.ANIMAL, ContentCategory.FASHION).forEach {
             assertEquals(
-                setOf(StreamingSite.BILIBILI, StreamingSite.YOUKU, StreamingSite.TENCENT, StreamingSite.DOUYIN),
+                setOf(StreamingSite.BILIBILI, StreamingSite.TENCENT, StreamingSite.DOUYIN),
                 it.sites,
             )
         }
@@ -83,7 +83,7 @@ class ContentCatalogTest {
             ContentCategory.TV.sitesInDisplayOrder(),
         )
         assertEquals(
-            listOf(StreamingSite.IQIYI, StreamingSite.BILIBILI, StreamingSite.TENCENT),
+            listOf(StreamingSite.BILIBILI, StreamingSite.MANGO, StreamingSite.TENCENT),
             ContentCategory.PODCAST.sitesInDisplayOrder(),
         )
     }

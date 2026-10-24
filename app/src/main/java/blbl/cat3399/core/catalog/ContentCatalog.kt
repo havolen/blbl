@@ -53,12 +53,12 @@ enum class ContentCategory(
     KNOWLEDGE("knowledge", listOf("知识", "教育", "公开课"), setOf(StreamingSite.IQIYI, StreamingSite.BILIBILI, StreamingSite.MANGO, StreamingSite.YOUKU, StreamingSite.DOUYIN)),
     LIVE("live", listOf("直播"), setOf(StreamingSite.IQIYI, StreamingSite.BILIBILI, StreamingSite.MANGO, StreamingSite.YOUKU, StreamingSite.DOUYIN)),
     MUSIC("music", listOf("音乐"), setOf(StreamingSite.BILIBILI, StreamingSite.MANGO, StreamingSite.TENCENT, StreamingSite.DOUYIN)),
-    PODCAST("podcast", listOf("播客", "中视频"), setOf(StreamingSite.IQIYI, StreamingSite.BILIBILI, StreamingSite.TENCENT)),
+    PODCAST("podcast", listOf("播客", "中视频"), setOf(StreamingSite.BILIBILI, StreamingSite.MANGO, StreamingSite.TENCENT)),
     TECH("tech", listOf("科技", "数码", "AI"), setOf(StreamingSite.BILIBILI, StreamingSite.YOUKU, StreamingSite.TENCENT)),
-    LIFE("life", listOf("生活", "生活Vlog"), setOf(StreamingSite.BILIBILI, StreamingSite.YOUKU, StreamingSite.TENCENT, StreamingSite.DOUYIN)),
-    CAR("car", listOf("汽车"), setOf(StreamingSite.BILIBILI, StreamingSite.YOUKU, StreamingSite.TENCENT, StreamingSite.DOUYIN)),
-    ANIMAL("animal", listOf("动物", "宠物"), setOf(StreamingSite.BILIBILI, StreamingSite.YOUKU, StreamingSite.TENCENT, StreamingSite.DOUYIN)),
-    FASHION("fashion", listOf("时尚", "美妆"), setOf(StreamingSite.BILIBILI, StreamingSite.YOUKU, StreamingSite.TENCENT, StreamingSite.DOUYIN)),
+    LIFE("life", listOf("生活", "生活Vlog"), setOf(StreamingSite.BILIBILI, StreamingSite.TENCENT, StreamingSite.DOUYIN)),
+    CAR("car", listOf("汽车"), setOf(StreamingSite.BILIBILI, StreamingSite.TENCENT, StreamingSite.DOUYIN)),
+    ANIMAL("animal", listOf("动物", "宠物"), setOf(StreamingSite.BILIBILI, StreamingSite.TENCENT, StreamingSite.DOUYIN)),
+    FASHION("fashion", listOf("时尚", "美妆"), setOf(StreamingSite.BILIBILI, StreamingSite.TENCENT, StreamingSite.DOUYIN)),
     ;
 
     /** Canonical (first-alias) name used by the category rail and site switches. */
