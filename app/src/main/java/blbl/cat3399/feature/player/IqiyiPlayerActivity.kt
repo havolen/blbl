@@ -278,7 +278,7 @@ class IqiyiPlayerActivity : BaseActivity() {
                 if (focused) {
                     android.graphics.Color.WHITE
                 } else {
-                    blbl.cat3399.core.theme.ThemeColor.resolve(
+                    blbl.cat3399.core.ui.ThemeColor.resolve(
                         this,
                         R.attr.blblAccent,
                         R.color.blbl_blue,

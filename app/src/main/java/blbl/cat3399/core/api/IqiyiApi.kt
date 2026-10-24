@@ -1,6 +1,7 @@
 package blbl.cat3399.core.api
 
 import android.os.Build
+import blbl.cat3399.core.log.AppLog
 import blbl.cat3399.core.net.CookieStore
 import blbl.cat3399.core.net.await
 import kotlinx.coroutines.Dispatchers
