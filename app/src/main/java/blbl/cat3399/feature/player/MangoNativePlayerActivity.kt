@@ -135,7 +135,7 @@ class MangoNativePlayerActivity : Activity() {
                 override fun onSeekStep(targetMs: Long, durationMs: Long) {
                     showControls(requestFocus = false)
                     handler.removeCallbacks(hideControlsRunnable)
-                    progressBar.requestFocus()
+                    progressBar.post { progressBar.requestFocus() }
                     updateStatus()
                 }
 

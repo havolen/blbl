@@ -3,6 +3,7 @@ package blbl.cat3399.feature.player
 import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
+import blbl.cat3399.core.log.AppLog
 
 /**
  * Shared D-pad seek behavior for every site player.
@@ -57,6 +58,7 @@ internal class PlayerSeekKeyController(
                 val target = if (duration > 0L) rawTarget.coerceIn(0L, duration) else rawTarget.coerceAtLeast(0L)
                 host.seekTo(target)
                 host.onSeekStep(target, duration)
+                AppLog.i("SeekKey", "step dir=$direction stepMs=$stepMs target=$target duration=$duration")
                 if (direction > 0) {
                     previousSpeed = host.playbackSpeed().takeIf { it.isFinite() && it > 0f } ?: 1f
                     val runnable =
@@ -65,6 +67,7 @@ internal class PlayerSeekKeyController(
                             holding = true
                             host.setPlaybackSpeed(holdSpeed)
                             host.onHoldSpeedStart(holdSpeed)
+                            AppLog.i("SeekKey", "holdSpeed start ${holdSpeed}x")
                         }
                     pendingHold = runnable
                     handler.postDelayed(runnable, HOLD_DELAY_MS)
@@ -83,6 +86,7 @@ internal class PlayerSeekKeyController(
                     holding = false
                     host.setPlaybackSpeed(previousSpeed)
                     host.onHoldSpeedStop()
+                    AppLog.i("SeekKey", "holdSpeed stop restore=${previousSpeed}x")
                 }
                 return true
             }
